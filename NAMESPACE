@@ -3,6 +3,7 @@
 export(GCM_f)
 export(MX2_F_test_f)
 export(dCRT_f)
+export(fast_data_generate)
 export(fit_conditional_mean)
 export(generate_cov_ar1)
 importFrom(magrittr,"%>%")

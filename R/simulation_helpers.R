@@ -22,3 +22,19 @@ generate_cov_ar1 = function(rho, d){
   }
   sig
 }
+
+#' Title
+#'
+#' @param covariance The covariance matrix of MVN.
+#' @param B The number of replicate
+#' @param n The number of sample
+#'
+#' @return A data matrix generated via Cholesky
+#' @export
+fast_data_generate <- function(covariance, B, n){
+  A <- Matrix::chol(covariance)
+  d <- ncol(covariance)
+  indep_data <- matrix(rnorm(B*n*d), nrow = B*n, ncol = d)
+  trans_data <- indep_data %*% A
+  return(trans_data)
+}

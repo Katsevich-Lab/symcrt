@@ -8,8 +8,8 @@
 
 #' Generate dxd AR(1) covariance matrix with parameter rho
 #'
-#' @param rho
-#' @param d
+#' @param rho The autocorrelation parameter
+#' @param d The dimension of the matrix
 #'
 #' @return A dxd covariance matrix.
 #' @export

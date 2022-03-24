@@ -1,5 +1,14 @@
-# helper function to fit a conditional mean of a response (could be Y or X) on
-# a set of predictors (usually Z)
+#' Fit conditional mean.
+#'
+#' Function that fits some regression method to get a conditional mean of a
+#' response (could be Y or X) given features (usually Z).
+#'
+#' @param response A response vector of length n
+#' @param features A design matrix of dimension nxp
+#' @param method   A string that specifies which regression method to use, e.g. \code{OLS} or \code{LASSO}
+#'
+#' @return A vector of fitted conditional means
+#' @export
 fit_conditional_mean <- function(response, features, method) {
   switch(method,
     OLS = {

@@ -7,7 +7,9 @@
 generate_cov_ar1(rho, d)
 }
 \arguments{
-\item{d}{}
+\item{rho}{The autocorrelation parameter}
+
+\item{d}{The dimension of the matrix}
 }
 \value{
 A dxd covariance matrix.

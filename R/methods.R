@@ -56,14 +56,37 @@ MX2_F_test_f <- function(data, X_on_Z_reg, Y_on_Z_reg, X_on_Z_var) {
 #' @param data A named list with fields X, Y, Z.
 #' @param X_on_Z_reg The regression method to apply for X|Z.
 #' @param Y_on_Z_reg The regression method to apply for Y|Z.
-#' @param X_on_Z_var The method to obtain the conditional variance of X|Z.
 #'
 #' @return A data frame with columns "parameter," "target," "value",
 #' with two rows, one for the test statistic, and one for the p-value.
 #'
 #' @export
-GCM_f <- function(data, X_on_Z_reg, Y_on_Z_reg, X_on_Z_var) {
-  # TBD
+GCM_f <- function(data, X_on_Z_reg, Y_on_Z_reg) {
+  # extract X, Y, Z from first input argument
+  X <- data$X
+  Y <- data$Y
+  Z <- data$Z
+  n <- nrow(Z)
+
+  # fit conditional mean of X given Z
+  E_X_given_Z <- fit_conditional_mean(X, Z, X_on_Z_reg)
+
+  # fit conditional mean of Y given Z
+  E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg)
+
+  # define the test statistic
+  X_residuals <- X - E_X_given_Z
+  Y_residuals <- Y - E_Y_given_Z
+  R = X_residuals*Y_residuals
+  test_statistic <- sqrt(n)*mean(R)/sqrt(mean(R^2)-(mean(R))^2)
+
+  # define the p-value (for now, define as two-sided)
+  p_value <- 2*stats::pnorm(abs(test_statistic), lower.tail = FALSE)
+
+  # output the results
+  data.frame(parameter = c("test_statistic", "p_value"),
+             target = "conditional_independence",
+             value = c(test_statistic, p_value))
 }
 
 #' The distilled CRT.

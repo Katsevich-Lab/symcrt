@@ -4,7 +4,7 @@
 \alias{GCM_f}
 \title{The generalized covariance measure test of Shah and Peters.}
 \usage{
-GCM_f(data, X_on_Z_reg, Y_on_Z_reg, X_on_Z_var)
+GCM_f(data, X_on_Z_reg, Y_on_Z_reg)
 }
 \arguments{
 \item{data}{A named list with fields X, Y, Z.}
@@ -12,8 +12,6 @@ GCM_f(data, X_on_Z_reg, Y_on_Z_reg, X_on_Z_var)
 \item{X_on_Z_reg}{The regression method to apply for X|Z.}
 
 \item{Y_on_Z_reg}{The regression method to apply for Y|Z.}
-
-\item{X_on_Z_var}{The method to obtain the conditional variance of X|Z.}
 }
 \value{
 A data frame with columns "parameter," "target," "value",

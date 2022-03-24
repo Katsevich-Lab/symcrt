@@ -17,7 +17,7 @@ fit_conditional_mean <- function(response, features, method) {
     },
     LASSO = {
       lasso_fit <- glmnet::cv.glmnet(x = features, y = response)
-      glmnet::predict.glmnet(lasso_fit, newx = features, s = "lambda.1se") |> as.vector()
+      stats::predict(lasso_fit, newx = features, s = "lambda.1se") |> as.vector()
     },
     zero = {
       # wrong estimate!

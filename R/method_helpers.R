@@ -5,7 +5,7 @@
 #'
 #' @param response A response vector of length n
 #' @param features A design matrix of dimension nxp
-#' @param method   A string that specifies which regression method to use, e.g. \code{OLS} or \code{LASSO}
+#' @param method   A string that specifies which regression method to use, e.g. \code{OLS} or \code{LASSO} or \code{PLASSO}
 #'
 #' @return A vector of fitted conditional means
 #' @export
@@ -18,6 +18,12 @@ fit_conditional_mean <- function(response, features, method) {
     LASSO = {
       lasso_fit <- glmnet::cv.glmnet(x = features, y = response)
       stats::predict(lasso_fit, newx = features, s = "lambda.1se") |> as.vector()
+    },
+    PLASSO = {
+      lasso_fit <- glmnet::cv.glmnet(x = features, y = response)
+      act_set <- which(coef(lasso_fit, s = 'lambda.1se')[-1,]!= 0) |> unname()
+      lm_fit <- stats::lm(response ~ features[, act_set])
+      lm_fit$fitted.values |> unname()
     },
     zero = {
       # wrong estimate!

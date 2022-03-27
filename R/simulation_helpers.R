@@ -4,8 +4,6 @@
 #
 ######################################################################
 
-# generate dxd AR(1) covariance matrix with parameter rho
-
 #' Generate dxd AR(1) covariance matrix with parameter rho
 #'
 #' @param rho The autocorrelation parameter
@@ -14,28 +12,24 @@
 #' @return A dxd covariance matrix.
 #' @export
 generate_cov_ar1 = function(rho, d){
-  sig <- matrix(0, nrow = d, ncol = d)
-  for (i in 1:d) {
-    for (j in 1:d) {
-      sig[i,j] <- rho**(abs(i-j))
-    }
-  }
-  sig
+  stats::toeplitz(rho^(0:(d-1)))
 }
 
 #' A fast way to generate data from multivariate Gaussian distribution
 #'
 #' @param mean The mean vector of MVN.
 #' @param covariance The covariance matrix of MVN.
-#' @param B The number of replicate
-#' @param n The number of sample
+#' @param num_samples The number of samples to generate
 #'
-#' @return A data matrix generated via Cholesky
+#' @return A matrix with \code{sum_samples} rows and \code{d = ncol(covariance)}
+#' columns, such that each row is drawn i.i.d. from the multivariate normal
+#' specified by the arguments.
+#'
 #' @export
-fast_data_generate <- function(mean, covariance, B, n){
+fast_generate_mvn <- function(mean, covariance, num_samples){
   A <- Matrix::chol(covariance)
   d <- ncol(covariance)
-  indep_data <- t(matrix(rnorm(B*n*d), nrow = B*n, ncol = d)) + mean
+  indep_data <- t(matrix(stats::rnorm(num_samples*d), nrow = num_samples, ncol = d)) + mean
   trans_data <- t(indep_data) %*% A
   return(trans_data)
 }

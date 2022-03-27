@@ -21,13 +21,13 @@ fit_conditional_mean <- function(response, features, method) {
     },
     PLASSO = {
       lasso_fit <- glmnet::cv.glmnet(x = features, y = response)
-      act_set <- which(coef(lasso_fit, s = 'lambda.1se')[-1,]!= 0) |> unname()
+      act_set <- which(stats::coef(lasso_fit, s = 'lambda.1se')[-1,]!= 0) |> unname()
       lm_fit <- stats::lm(response ~ features[, act_set])
       lm_fit$fitted.values |> unname()
     },
     HDLogistic = {
       HD_logistic_fit <- glmnet::cv.glmnet(x = features, y = response, family = "binomial")
-      stats::predict(HD_logistic_fit, newx = features, type = "response", 
+      stats::predict(HD_logistic_fit, newx = features, type = "response",
                      s = "lambda.1se") |> as.vector()
     },
     zero = {
@@ -47,16 +47,20 @@ fit_conditional_mean <- function(response, features, method) {
 #'
 #' @param response A response vector of length n
 #' @param features A design matrix of dimension nxp
-#' @param conditional_mean The conditional mean vector of length n 
+#' @param conditional_mean The conditional mean vector of length n
 #' @param method A string that specifies the variance estimation method to use, e.g. \code{squared_residual}
 #'
-#' @return A vector of estimated conditional variance of length n
+#' @return A vector of estimated conditional variances of length n
 #' @export
 
 fit_conditional_variance <- function(response, features, conditional_mean, method) {
   switch(method,
     squared_residual = {
       (response - conditional_mean)^2
+    },
+    homoskedastic = {
+      n = length(response)
+      rep(mean((response - conditional_mean)^2), n)
     },
     {
       stop("Invalid specification of conditional variance estimation method.")
@@ -74,24 +78,20 @@ fit_conditional_variance <- function(response, features, conditional_mean, metho
 #' @return A matrix of nxno_resample including the resamples
 #' @export
 resample_dCRT <- function(conditional_mean, conditional_variance = NULL, no_resample = 1000, resample_dist){
+  # TODO: Write unit tests for this function
   switch(resample_dist,
          Binom = {
            n <- length(conditional_mean)
-           matrix(rbinom(n*no_resample, 1, prob = rep(conditional_mean, no_resample)),
-                               nrow = n, 
+           matrix(stats::rbinom(n*no_resample, 1, prob = rep(conditional_mean, no_resample)),
+                               nrow = n,
                                ncol = no_resample)
          },
-         Heter_Gaussian = {
-           t(fast_data_generate(mean = conditional_mean, covariance = diag(conditional_variance), 
-                                B = no_resample, 
-                                n = 1))
-         },
-         Homo_Gaussian = {
-           variance_estimate <- mean(conditional_variance)
-           variance <- rep(variance_estimate, length(conditional_variance))
-           t(fast_data_generate(mean = conditional_mean, covariance = diag(variance), 
-                                B = no_resample, 
-                                n = 1))
+         Gaussian = {
+           matrix(stats::rnorm(n*no_resample,
+                               mean = rep(conditional_mean, no_resample),
+                               sd = sqrt(rep(conditional_variance, no_resample))),
+                  nrow = n,
+                  ncol = no_resample)
          },
          {
            stop("Invalid specification of resampling method.")

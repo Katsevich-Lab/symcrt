@@ -2,22 +2,33 @@
 % Please edit documentation in R/methods.R
 \name{dCRT_f}
 \alias{dCRT_f}
-\title{Model_X test}
+\title{The distilled CRT test}
 \usage{
-dCRT_f(data, Y_on_Z_reg, resample_dist, no_resample = 2000)
+dCRT_f(
+  data,
+  X_on_Z_reg,
+  Y_on_Z_reg,
+  X_on_Z_var,
+  resample_dist,
+  no_resample = 2000
+)
 }
 \arguments{
 \item{data}{A named list with fields X, Y, Z.}
 
-\item{Y_on_Z_reg}{The regression method to apply for X|Z.}
+\item{X_on_Z_reg}{The regression method to apply for X|Z.}
 
-\item{resample_dist}{The resampling distribution}
+\item{Y_on_Z_reg}{The regression method to apply for Y|Z.}
 
-\item{no_resample}{The number of resamples}
+\item{X_on_Z_var}{The method to obtain the conditional variance of X|Z.}
+
+\item{resample_dist}{The resampling distribution for CRT}
+
+\item{no_resample}{The number of resampling}
 }
 \value{
 A data frame with columns "parameter," "target," "value" with p-value.
 }
 \description{
-Model_X test
+The distilled CRT test
 }

@@ -2,11 +2,13 @@
 % Please edit documentation in R/simulation_helpers.R
 \name{fast_data_generate}
 \alias{fast_data_generate}
-\title{Title}
+\title{A fast way to generate data from multivariate Gaussian distribution}
 \usage{
-fast_data_generate(covariance, B, n)
+fast_data_generate(mean, covariance, B, n)
 }
 \arguments{
+\item{mean}{The mean vector of MVN.}
+
 \item{covariance}{The covariance matrix of MVN.}
 
 \item{B}{The number of replicate}
@@ -17,5 +19,5 @@ fast_data_generate(covariance, B, n)
 A data matrix generated via Cholesky
 }
 \description{
-Title
+A fast way to generate data from multivariate Gaussian distribution
 }

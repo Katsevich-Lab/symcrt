@@ -25,6 +25,11 @@ fit_conditional_mean <- function(response, features, method) {
       lm_fit <- stats::lm(response ~ features[, act_set])
       lm_fit$fitted.values |> unname()
     },
+    HDLogistic = {
+      HD_logistic_fit <- glmnet::cv.glmnet(x = features, y = response, family = "binomial")
+      stats::predict(HD_logistic_fit, newx = features, type = "response", 
+                     s = "lambda.1se") |> as.vector()
+    },
     zero = {
       # wrong estimate!
       n <- nrow(features)

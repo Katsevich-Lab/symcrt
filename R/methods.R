@@ -185,7 +185,7 @@ dCRT_f <- function(data, Y_on_Z_reg, resample_dist, no_resample = 2000) {
   test_statistic <- 1/(sqrt(n)*S_hat)*sum(X_residuals*Y_residuals)
   
   # resample matrix from the specified distribution
-  resample_matrix <- resample_dCRT(rep(0, n), X_given_Z_variance, no_resample, resample_dist)
+  resample_matrix <- resample_dCRT(X_given_Z_mean, X_given_Z_variance, no_resample, resample_dist)
   
   # compute the residuals and variance vector for each resample
   resample_X_residuals <- resample_matrix

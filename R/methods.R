@@ -188,7 +188,7 @@ dCRT_f <- function(data, Y_on_Z_reg, resample_dist, no_resample = 2000) {
   resample_matrix <- resample_dCRT(X_given_Z_mean, X_given_Z_variance, no_resample, resample_dist)
   
   # compute the residuals and variance vector for each resample
-  resample_X_residuals <- resample_matrix
+  resample_X_residuals <- resample_matrix - X_given_Z_mean
   var_star_X_given_Z <- resample_X_residuals^2
   
   # compute the residual, variance and sd for each resample

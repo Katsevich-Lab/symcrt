@@ -10,7 +10,7 @@
 #' 
 #' @return A vector of fitted conditional means
 #' @export
-fit_conditional_mean <- function(response, features, method, family) {
+fit_conditional_mean <- function(response, features, method, family = NULL) {
   switch(method,
     OLS = {
       lm_fit <- stats::lm(response ~ features)

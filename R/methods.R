@@ -146,8 +146,8 @@ dCRT_f <- function(data,
   E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg)
 
   # define the test statistic
-  X_residuals <- X - E_X_given_Z
-  Y_residuals <- Y - E_Y_given_Z
+  X_residuals <- c(X - E_X_given_Z)
+  Y_residuals <- c(Y - E_Y_given_Z)
   S_hat <- sqrt(mean(Var_X_given_Z*Y_residuals^2))
   test_statistic <- 1/(sqrt(n)*S_hat)*sum(X_residuals*Y_residuals)
 

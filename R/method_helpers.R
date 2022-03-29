@@ -87,6 +87,7 @@ resample_dCRT <- function(conditional_mean, conditional_variance = NULL, no_resa
                                ncol = no_resample)
          },
          Gaussian = {
+           n <- length(conditional_mean)
            matrix(stats::rnorm(n*no_resample,
                                mean = rep(conditional_mean, no_resample),
                                sd = sqrt(rep(conditional_variance, no_resample))),

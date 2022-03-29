@@ -5,11 +5,12 @@
 #'
 #' @param response A response vector of length n
 #' @param features A design matrix of dimension nxp
-#' @param method   A string that specifies which regression method to use, e.g. \code{OLS} or \code{LASSO} or \code{PLASSO}
-#'
+#' @param method   A string that specifies which regression method to use, e.g. \code{OLS} or \code{LASSO} 
+#' @param family   A string that specifies the link function e.g.\code{Gaussian} or \code{Binomial}
+#' 
 #' @return A vector of fitted conditional means
 #' @export
-fit_conditional_mean <- function(response, features, method) {
+fit_conditional_mean <- function(response, features, method, family) {
   switch(method,
     OLS = {
       lm_fit <- stats::lm(response ~ features)
@@ -19,16 +20,50 @@ fit_conditional_mean <- function(response, features, method) {
       lasso_fit <- glmnet::cv.glmnet(x = features, y = response)
       stats::predict(lasso_fit, newx = features, s = "lambda.1se") |> as.vector()
     },
+    MLE = {
+      if(is.null(family)){
+        stop("A family in GLM should be specified!")
+      }
+      GLM_fit <- stats::glm(response ~ features, family = family)
+      GLM_fit$fitted.values |> unname()
+    },
+    PMLE = {
+      if(is.null(family)){
+        stop("A family in GLM should be specified!")
+      }
+      PMLE_fit <- glmnet::cv.glmnet(x = features, y = response, family = family)
+      stats::predict(PMLE_fit, newx = features, type = "response",
+                     s = "lambda.1se") |> as.vector()
+    },
     PLASSO = {
       lasso_fit <- glmnet::cv.glmnet(x = features, y = response)
-      act_set <- which(stats::coef(lasso_fit, s = 'lambda.1se')[-1,]!= 0) |> unname()
-      lm_fit <- stats::lm(response ~ features[, act_set])
-      lm_fit$fitted.values |> unname()
+      coef_1se <- stats::coef(lasso_fit, s = 'lambda.1se')
+      act_set <- which(coef_1se[-1,1]!= 0) |> unname()
+      if(length(act_set) == 0){
+        n <- length(response)
+        return(rep(mean(response), n))
+      }else{
+        lm_fit <- stats::lm(response ~ features[, act_set])
+        return(lm_fit$fitted.values |> unname())
+      }
     },
-    HDLogistic = {
-      HD_logistic_fit <- glmnet::cv.glmnet(x = features, y = response, family = "binomial")
-      stats::predict(HD_logistic_fit, newx = features, type = "response",
-                     s = "lambda.1se") |> as.vector()
+    PPMLE = {
+      if(is.null(family)){
+        stop("A family in GLM should be specified!")
+      }
+      PMLE_fit <- glmnet::cv.glmnet(x = features, y = response, family = family)
+      coef_1se <- stats::coef(PMLE_fit, s = 'lambda.1se')
+      act_set <- which(coef_1se[-1,1]!= 0) |> unname()
+      if(length(act_set) == 0){
+        n <- length(response)
+        intercept <- coef_1se[1,1] |> unname()
+        feature_intercept <- rep(intercept, n)
+        glm_fit <- stats::glm(response ~ feature_intercept, family = family)
+        return(glm_fit$fitted.values |> unname())
+      }else{
+        glm_fit <- stats::glm(response ~ features[, act_set], family = family)
+        return(glm_fit$fitted.values |> unname())
+      }
     },
     zero = {
       # wrong estimate!

@@ -4,14 +4,16 @@
 \alias{fit_conditional_mean}
 \title{Fit conditional mean.}
 \usage{
-fit_conditional_mean(response, features, method)
+fit_conditional_mean(response, features, method, family)
 }
 \arguments{
 \item{response}{A response vector of length n}
 
 \item{features}{A design matrix of dimension nxp}
 
-\item{method}{A string that specifies which regression method to use, e.g. \code{OLS} or \code{LASSO} or \code{PLASSO}}
+\item{method}{A string that specifies which regression method to use, e.g. \code{OLS} or \code{LASSO}}
+
+\item{family}{A string that specifies the link function e.g.\code{Gaussian} or \code{Binomial}}
 }
 \value{
 A vector of fitted conditional means

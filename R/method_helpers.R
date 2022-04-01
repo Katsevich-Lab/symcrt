@@ -5,75 +5,85 @@
 #'
 #' @param response A response vector of length n
 #' @param features A design matrix of dimension nxp
-#' @param method   A string that specifies which regression method to use, e.g. \code{OLS} or \code{LASSO} 
+#' @param method   A string that specifies which regression method to use, e.g. \code{OLS} or \code{LASSO}
 #' @param family   A string that specifies the link function e.g.\code{Gaussian} or \code{Binomial}
-#' 
+#'
 #' @return A vector of fitted conditional means
 #' @export
-fit_conditional_mean <- function(response, features, method, family = NULL) {
-  switch(method,
-    OLS = {
-      lm_fit <- stats::lm(response ~ features)
-      lm_fit$fitted.values |> unname()
-    },
-    LASSO = {
-      lasso_fit <- glmnet::cv.glmnet(x = features, y = response)
-      stats::predict(lasso_fit, newx = features, s = "lambda.1se") |> as.vector()
-    },
+fit_conditional_mean <- function(response, features, method) {
+  method_type <- method$method_type
+  hyperparams <- method$hyperparams
+  family <- method$family
+  switch(method_type,
     MLE = {
-      if(is.null(family)){
+      if (is.null(family)) {
         stop("A family in GLM should be specified!")
       }
       GLM_fit <- stats::glm(response ~ features, family = family)
       GLM_fit$fitted.values |> unname()
     },
-    PMLE = {
-      if(is.null(family)){
-        stop("A family in GLM should be specified!")
-      }
-      PMLE_fit <- glmnet::cv.glmnet(x = features, y = response, family = family)
-      stats::predict(PMLE_fit, newx = features, type = "response",
-                     s = "lambda.1se") |> as.vector()
+    LASSO = {
+      lasso_fit <- fit_lasso(response, features, hyperparams)
+      # generate predictions
+      stats::predict(lasso_fit,
+        newx = features,
+        type = "response",
+        s = s,
+      ) |> as.vector()
     },
     PLASSO = {
-      lasso_fit <- glmnet::cv.glmnet(x = features, y = response)
-      coef_1se <- stats::coef(lasso_fit, s = 'lambda.1se')
-      act_set <- which(coef_1se[-1,1]!= 0) |> unname()
-      if(length(act_set) == 0){
-        n <- length(response)
-        return(rep(mean(response), n))
-      }else{
-        lm_fit <- stats::lm(response ~ features[, act_set])
-        return(lm_fit$fitted.values |> unname())
+      # parse s hyperparameter
+      if (is.null(hyperparams$s)) {
+        s <- "lambda.1se"
+      } else {
+        s <- hyperparams$s
       }
-    },
-    PPMLE = {
-      if(is.null(family)){
-        stop("A family in GLM should be specified!")
-      }
-      PMLE_fit <- glmnet::cv.glmnet(x = features, y = response, family = family)
-      coef_1se <- stats::coef(PMLE_fit, s = 'lambda.1se')
-      act_set <- which(coef_1se[-1,1]!= 0) |> unname()
-      if(length(act_set) == 0){
-        n <- length(response)
-        intercept <- coef_1se[1,1] |> unname()
-        feature_intercept <- rep(intercept, n)
-        glm_fit <- stats::glm(response ~ feature_intercept, family = family)
-        return(glm_fit$fitted.values |> unname())
-      }else{
+      lasso_fit <- fit_lasso(response, features, hyperparams)
+      coefs <- stats::coef(lasso_fit, s = s)
+      act_set <- which(coefs[-1, 1] != 0) |> unname()
+      if (length(act_set) == 0) {
+        glm_fit <- stats::glm(response ~ 1, family = family)
+      } else {
         glm_fit <- stats::glm(response ~ features[, act_set], family = family)
-        return(glm_fit$fitted.values |> unname())
       }
+      glm_fit$fitted.values |> unname()
     },
     zero = {
       # wrong estimate!
       n <- nrow(features)
-      rep(0, n)
+      numeric(n)
     },
     {
       stop("Invalid specification of regression method.")
     }
   )
+}
+
+# TODO: document this function
+fit_lasso <- function(response, features, hyperparams){
+  # set default values of hyperparameters
+  if (is.null(hyperparams$s)) {
+    s <- "lambda.1se"
+  } else {
+    s <- hyperparams$s
+  }
+  if (is.null(hyperparams$nfolds)) {
+    nfolds <- 10
+  } else {
+    nfolds <- hyperparams$nfolds
+  }
+  if (is.null(hyperparams$alpha)) {
+    alpha <- 1
+  } else {
+    alpha <- hyperparams$alpha
+  }
+  if (is.null(family)) {
+    family <- "gaussian"
+  } else{
+    family <- hyperparams$family
+  }
+  # run lasso
+  glmnet::cv.glmnet(x = features, y = response, nfolds = nfolds, alpha = alpha, family = family)
 }
 
 # helper function to fit a conditional variance of a response (could be Y or X) on
@@ -88,13 +98,13 @@ fit_conditional_mean <- function(response, features, method, family = NULL) {
 #' @return A vector of estimated conditional variances of length n
 #' @export
 
-fit_conditional_variance <- function(response, features, conditional_mean, method) {
-  switch(method,
+fit_conditional_variance <- function(response, features, conditional_mean, method_type) {
+  switch(method_type,
     squared_residual = {
       (response - conditional_mean)^2
     },
     homoskedastic = {
-      n = length(response)
+      n <- length(response)
       rep(mean((response - conditional_mean)^2), n)
     },
     {
@@ -112,25 +122,28 @@ fit_conditional_variance <- function(response, features, conditional_mean, metho
 #'
 #' @return A matrix of nxno_resample including the resamples
 #' @export
-resample_dCRT <- function(conditional_mean, conditional_variance = NULL, no_resample = 1000, resample_dist){
+resample_dCRT <- function(conditional_mean, conditional_variance = NULL, no_resample = 1000, resample_dist) {
   # TODO: Write unit tests for this function
   switch(resample_dist,
-         Binom = {
-           n <- length(conditional_mean)
-           matrix(stats::rbinom(n*no_resample, 1, prob = rep(conditional_mean, no_resample)),
-                               nrow = n,
-                               ncol = no_resample)
-         },
-         Gaussian = {
-           n <- length(conditional_mean)
-           matrix(stats::rnorm(n*no_resample,
-                               mean = rep(conditional_mean, no_resample),
-                               sd = sqrt(rep(conditional_variance, no_resample))),
-                  nrow = n,
-                  ncol = no_resample)
-         },
-         {
-           stop("Invalid specification of resampling method.")
-         }
+    Binom = {
+      n <- length(conditional_mean)
+      matrix(stats::rbinom(n * no_resample, 1, prob = rep(conditional_mean, no_resample)),
+        nrow = n,
+        ncol = no_resample
+      )
+    },
+    Gaussian = {
+      n <- length(conditional_mean)
+      matrix(stats::rnorm(n * no_resample,
+        mean = rep(conditional_mean, no_resample),
+        sd = sqrt(rep(conditional_variance, no_resample))
+      ),
+      nrow = n,
+      ncol = no_resample
+      )
+    },
+    {
+      stop("Invalid specification of resampling method.")
+    }
   )
 }

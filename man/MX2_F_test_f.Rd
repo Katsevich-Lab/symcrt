@@ -4,7 +4,7 @@
 \alias{MX2_F_test_f}
 \title{The MX(2) F-test.}
 \usage{
-MX2_F_test_f(data, X_on_Z_reg, Y_on_Z_reg, X_on_Z_var)
+MX2_F_test_f(data, X_on_Z_reg, Y_on_Z_reg)
 }
 \arguments{
 \item{data}{A named list with fields X, Y, Z.}

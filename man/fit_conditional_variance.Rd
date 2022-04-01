@@ -4,7 +4,7 @@
 \alias{fit_conditional_variance}
 \title{Title}
 \usage{
-fit_conditional_variance(response, features, conditional_mean, method)
+fit_conditional_variance(response, features, conditional_mean, method_type)
 }
 \arguments{
 \item{response}{A response vector of length n}

@@ -4,7 +4,7 @@
 \alias{fit_conditional_mean}
 \title{Fit conditional mean.}
 \usage{
-fit_conditional_mean(response, features, method, family = NULL)
+fit_conditional_mean(response, features, method)
 }
 \arguments{
 \item{response}{A response vector of length n}

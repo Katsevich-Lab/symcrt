@@ -26,11 +26,11 @@ test_that("generate_cov_ar1 works", {
   d <- 53
   expect_equal(
     dim(generate_cov_ar1(rho, d)),
-    c(d,d)
+    c(d, d)
   )
 })
 
-test_that("fast_generate_mvn works",{
+test_that("fast_generate_mvn works", {
   # check whether the empirical covariance roughly matches the true covariance
   # for a large number of samples from a MVN
   rho <- 0.3
@@ -41,7 +41,9 @@ test_that("fast_generate_mvn works",{
   set.seed(1)
   mvn_data <- fast_generate_mvn(mean, true_cov, num_samples)
   sample_cov <- var(mvn_data)
-  expect_lt(max(abs(sample_cov - true_cov)),
-                   0.1)
+  expect_lt(
+    max(abs(sample_cov - true_cov)),
+    0.1
+  )
   expect_equal(dim(mvn_data), c(num_samples, d))
 })

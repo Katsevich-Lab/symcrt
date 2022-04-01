@@ -4,14 +4,7 @@
 \alias{dCRT_f}
 \title{The distilled CRT test}
 \usage{
-dCRT_f(
-  data,
-  X_on_Z_reg,
-  Y_on_Z_reg,
-  X_on_Z_var,
-  resample_dist,
-  no_resample = 2000
-)
+dCRT_f(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams)
 }
 \arguments{
 \item{data}{A named list with fields X, Y, Z.}
@@ -22,7 +15,7 @@ dCRT_f(
 
 \item{X_on_Z_var}{The method to obtain the conditional variance of X|Z.}
 
-\item{resample_dist}{The resampling distribution for CRT}
+\item{resample_family}{The resampling distribution for CRT}
 
 \item{no_resample}{The number of resampling}
 }

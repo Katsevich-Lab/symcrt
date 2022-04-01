@@ -100,6 +100,60 @@ GCM_f <- function(data, X_on_Z_reg, Y_on_Z_reg) {
 }
 
 
+
+#' A function that outputs the bias term in GCM test
+#'
+#' @param data A named list with fields X, Y, Z.
+#' @param X_on_Z_reg The regression method to apply for X|Z.
+#' @param Y_on_Z_reg The regression method to apply for Y|Z.
+#'
+#' @return A data frame with columns "parameter," "target," "value",
+#' with three rows, are respectively cross_bias, X_Z_bias, Y_Z_bias
+#' @export
+
+GCM_debug <- function(data, X_on_Z_reg, Y_on_Z_reg) {
+  # extract X, Y, Z, cond_mean_X_Z, cond_mean_Y_Z from first input argument
+  X <- data$X
+  Y <- data$Y
+  Z <- data$Z
+  if (is.null(data$cond_mean_X_Z)){
+    stop("GCM_debug should know the oracle conditional mean of X given Z!")
+  }else{
+    cond_mean_X_Z <- data$cond_mean_X_Z
+  }
+  if (is.null(data$cond_mean_Y_Z)){
+    stop("GCM_debug should know the oracle conditional mean of Y given Z!")
+  }else{
+    cond_mean_Y_Z <- data$cond_mean_Y_Z
+  }
+  n <- nrow(Z)
+  
+  # fit conditional mean of X given Z
+  E_X_given_Z <- fit_conditional_mean(X, Z, X_on_Z_reg) # hat{E(X|Z)}
+  
+  # fit conditional mean of Y given Z
+  E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg) # hat{E(Y|Z)}
+  
+  # compute the oracle residuals
+  X_oracle_residuals <- X - cond_mean_X_Z # X - E(X|Z)
+  Y_oracle_residuals <- Y - cond_mean_Y_Z # Y - E(Y|Z)
+  cond_mean_diff_X_Z <- cond_mean_X_Z - E_X_given_Z # E(X|Z) - hat{E(X|Z)}
+  cond_mean_diff_Y_Z <- cond_mean_Y_Z - E_Y_given_Z # E(Y|Z) - hat{E(Y|Z)}
+  
+  # compute three bias terms
+  cross_bias <- sqrt(n)*mean(cond_mean_diff_X_Z*cond_mean_diff_Y_Z)
+  X_Z_bias <- sqrt(n)*mean(Y_oracle_residuals*cond_mean_diff_X_Z)
+  Y_Z_bias <- sqrt(n)*mean(X_oracle_residuals*cond_mean_diff_Y_Z)
+  
+  # output the results
+  data.frame(parameter = c("cross_bias", "X_Z_bias", "Y_Z_bias"),
+             target = "bias",
+             value = c(cross_bias, X_Z_bias, Y_Z_bias))
+}
+
+
+
+
 #' The distilled CRT test
 #'
 #' @param data A named list with fields X, Y, Z.

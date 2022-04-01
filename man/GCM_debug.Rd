@@ -4,7 +4,7 @@
 \alias{GCM_debug}
 \title{A function that outputs the bias term in GCM test}
 \usage{
-GCM_debug(data, X_on_Z_reg, Y_on_Z_reg)
+GCM_debug(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams)
 }
 \arguments{
 \item{data}{A named list with fields X, Y, Z.}
@@ -12,6 +12,8 @@ GCM_debug(data, X_on_Z_reg, Y_on_Z_reg)
 \item{X_on_Z_reg}{The regression method to apply for X|Z.}
 
 \item{Y_on_Z_reg}{The regression method to apply for Y|Z.}
+
+\item{test_hyperparams}{Additional method hyperparameters (currently not used)}
 }
 \value{
 A data frame with columns "parameter," "target," "value",

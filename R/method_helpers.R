@@ -11,15 +11,12 @@
 #' @return A vector of fitted conditional means
 #' @export
 fit_conditional_mean <- function(response, features, method) {
-  method_type <- method$method_type
-  hyperparams <- method$hyperparams
-  family <- method$family
+  method_type <- method$mean_method_type
+  hyperparams <- method$mean_method_hyperparams
+  hyperparams <- set_default_method_hyperparams(method_type, hyperparams)
   switch(method_type,
     MLE = {
-      if (is.null(family)) {
-        stop("A family in GLM should be specified!")
-      }
-      GLM_fit <- stats::glm(response ~ features, family = family)
+      GLM_fit <- stats::glm(response ~ features, family = hyperparams$family)
       GLM_fit$fitted.values |> unname()
     },
     LASSO = {
@@ -28,23 +25,17 @@ fit_conditional_mean <- function(response, features, method) {
       stats::predict(lasso_fit,
         newx = features,
         type = "response",
-        s = s,
+        s = hyperparams$s,
       ) |> as.vector()
     },
     PLASSO = {
-      # parse s hyperparameter
-      if (is.null(hyperparams$s)) {
-        s <- "lambda.1se"
-      } else {
-        s <- hyperparams$s
-      }
       lasso_fit <- fit_lasso(response, features, hyperparams)
-      coefs <- stats::coef(lasso_fit, s = s)
+      coefs <- stats::coef(lasso_fit, s = hyperparams$s)
       act_set <- which(coefs[-1, 1] != 0) |> unname()
       if (length(act_set) == 0) {
-        glm_fit <- stats::glm(response ~ 1, family = family)
+        glm_fit <- stats::glm(response ~ 1, family = hyperparams$family)
       } else {
-        glm_fit <- stats::glm(response ~ features[, act_set], family = family)
+        glm_fit <- stats::glm(response ~ features[, act_set], family = hyperparams$family)
       }
       glm_fit$fitted.values |> unname()
     },
@@ -61,29 +52,12 @@ fit_conditional_mean <- function(response, features, method) {
 
 # TODO: document this function
 fit_lasso <- function(response, features, hyperparams){
-  # set default values of hyperparameters
-  if (is.null(hyperparams$s)) {
-    s <- "lambda.1se"
-  } else {
-    s <- hyperparams$s
-  }
-  if (is.null(hyperparams$nfolds)) {
-    nfolds <- 10
-  } else {
-    nfolds <- hyperparams$nfolds
-  }
-  if (is.null(hyperparams$alpha)) {
-    alpha <- 1
-  } else {
-    alpha <- hyperparams$alpha
-  }
-  if (is.null(family)) {
-    family <- "gaussian"
-  } else{
-    family <- hyperparams$family
-  }
   # run lasso
-  glmnet::cv.glmnet(x = features, y = response, nfolds = nfolds, alpha = alpha, family = family)
+  glmnet::cv.glmnet(x = features,
+                    y = response,
+                    nfolds = hyperparams$nfolds,
+                    alpha = hyperparams$alpha,
+                    family = hyperparams$family)
 }
 
 # helper function to fit a conditional variance of a response (could be Y or X) on
@@ -146,4 +120,81 @@ resample_dCRT <- function(conditional_mean, conditional_variance = NULL, no_resa
       stop("Invalid specification of resampling method.")
     }
   )
+}
+
+#' Populate default hyperparameters for each method
+#'
+#' @param method_type The method type (MLE, LASSO, etc.)
+#' @param hyperparams The named list of hyperparams
+#'
+#' @return The same named list that was input, with default values added if necessary
+#' @export
+set_default_method_hyperparams <- function(method_type, hyperparams){
+  switch(method_type,
+         MLE={
+           # currently no hyperparams
+         },
+         LASSO={
+           if (is.null(hyperparams$s)) {
+             hyperparams$s <- "lambda.1se"
+           }
+           if (is.null(hyperparams$nfolds)) {
+             hyperparams$nfolds <- 10
+           }
+           if (is.null(hyperparams$alpha)) {
+             hyperparams$alpha <- 1
+           }
+           if (is.null(family)) {
+             hyperparams$family <- "gaussian"
+           }
+         },
+         PLASSO={
+           if (is.null(hyperparams$s)) {
+             hyperparams$s <- "lambda.1se"
+           }
+           if (is.null(hyperparams$nfolds)) {
+             hyperparams$nfolds <- 10
+           }
+           if (is.null(hyperparams$alpha)) {
+             hyperparams$alpha <- 1
+           }
+           if (is.null(family)) {
+             hyperparams$family <- "gaussian"
+           }
+         },
+         zero={
+           # currently no hyperparams
+         }
+         )
+  hyperparams
+}
+
+#' Populate default hyperparameters for each test
+#'
+#' @param method_type The method type (GCM, dCRT, etc.)
+#' @param hyperparams The named list of hyperparams
+#'
+#' @return The same named list that was input, with default values added if necessary
+#' @export
+set_default_test_hyperparams <- function(method_type, hyperparams){
+  switch(method_type,
+         GCM={
+           # currently no hyperparams
+         },
+         GCM_debug={
+           # currently no hyperparams
+         },
+         dCRT={
+           if(is.null(hyperparams$resample_family)){
+             hyperparams$resample_family <- "gaussian"
+           }
+           if(is.null(hyperparams$no_resample)){
+             hyperparams$no_resample <- 2000
+           }
+         },
+         MX2_F_test = {
+           # currently no hyperparams
+         }
+  )
+  hyperparams
 }

@@ -12,13 +12,13 @@
 #' @param data A named list with fields X, Y, Z.
 #' @param X_on_Z_reg The regression method to apply for X|Z.
 #' @param Y_on_Z_reg The regression method to apply for Y|Z.
-#' @param X_on_Z_var The method to obtain the conditional variance of X|Z.
+#' @param test_hyperparams Additional method hyperparameters (currently not used)
 #'
 #' @return A data frame with columns "parameter," "target," "value",
 #' with two rows, one for the test statistic, and one for the p-value.
 #'
 #' @export
-MX2_F_test <- function(data, X_on_Z_reg, Y_on_Z_reg) {
+MX2_F_test <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   # extract X, Y, Z from first input argument
   X <- data$X
   Y <- data$Y
@@ -28,15 +28,15 @@ MX2_F_test <- function(data, X_on_Z_reg, Y_on_Z_reg) {
   # fit conditional mean of X given Z
   if (X_on_Z_reg$mean_method_type == "oracle") {
     E_X_given_Z <- data$E_X_given_Z_oracle
-    if (is.null(E_X_given_Z)) stop("Must specify cond_mean if X_on_Z_reg is oracle")
+    if (is.null(E_X_given_Z)) stop("Must specify cond_mean if mean_method_type is oracle")
   } else {
     E_X_given_Z <- fit_conditional_mean(X, Z, X_on_Z_reg)
   }
 
   # fit conditional variance of X given Z
-  if (X_on_Z_var == "oracle") {
+  if (X_on_Z_reg$var_method_type == "oracle") {
     Var_X_given_Z <- data$Var_X_given_Z_oracle
-    if (is.null(Var_X_given_Z)) stop("Must specify cond_var if X_on_Z_var is oracle")
+    if (is.null(Var_X_given_Z)) stop("Must specify cond_var if var_method_type is oracle")
   } else {
     Var_X_given_Z <- fit_conditional_variance(X, Z, E_X_given_Z, X_on_Z_reg$var_method_type)
   }
@@ -68,12 +68,13 @@ MX2_F_test <- function(data, X_on_Z_reg, Y_on_Z_reg) {
 #' @param data A named list with fields X, Y, Z.
 #' @param X_on_Z_reg The regression method to apply for X|Z.
 #' @param Y_on_Z_reg The regression method to apply for Y|Z.
-#'
+#' @param test_hyperparams Additional method hyperparameters (currently not used)
+
 #' @return A data frame with columns "parameter," "target," "value",
 #' with two rows, one for the test statistic, and one for the p-value.
 #'
 #' @export
-GCM <- function(data, X_on_Z_reg, Y_on_Z_reg) {
+GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   # extract X, Y, Z from first input argument
   X <- data$X
   Y <- data$Y
@@ -110,12 +111,13 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg) {
 #' @param data A named list with fields X, Y, Z.
 #' @param X_on_Z_reg The regression method to apply for X|Z.
 #' @param Y_on_Z_reg The regression method to apply for Y|Z.
+#' @param test_hyperparams Additional method hyperparameters (currently not used)
 #'
 #' @return A data frame with columns "parameter," "target," "value",
 #' with three rows, are respectively cross_bias, X_Z_bias, Y_Z_bias
 #' @export
 
-GCM_debug <- function(data, X_on_Z_reg, Y_on_Z_reg) {
+GCM_debug <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   # extract X, Y, Z, cond_mean_X_Z, cond_mean_Y_Z from first input argument
   X <- data$X
   Y <- data$Y
@@ -131,24 +133,24 @@ GCM_debug <- function(data, X_on_Z_reg, Y_on_Z_reg) {
     cond_mean_Y_Z <- data$cond_mean_Y_Z
   }
   n <- nrow(Z)
-  
+
   # fit conditional mean of X given Z
   E_X_given_Z <- fit_conditional_mean(X, Z, X_on_Z_reg) # hat{E(X|Z)}
-  
+
   # fit conditional mean of Y given Z
   E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg) # hat{E(Y|Z)}
-  
+
   # compute the oracle residuals
   X_oracle_residuals <- X - cond_mean_X_Z # X - E(X|Z)
   Y_oracle_residuals <- Y - cond_mean_Y_Z # Y - E(Y|Z)
   cond_mean_diff_X_Z <- cond_mean_X_Z - E_X_given_Z # E(X|Z) - hat{E(X|Z)}
   cond_mean_diff_Y_Z <- cond_mean_Y_Z - E_Y_given_Z # E(Y|Z) - hat{E(Y|Z)}
-  
+
   # compute three bias terms
   cross_bias <- sqrt(n)*mean(cond_mean_diff_X_Z*cond_mean_diff_Y_Z)
   X_Z_bias <- sqrt(n)*mean(Y_oracle_residuals*cond_mean_diff_X_Z)
   Y_Z_bias <- sqrt(n)*mean(X_oracle_residuals*cond_mean_diff_Y_Z)
-  
+
   # output the results
   data.frame(parameter = c("cross_bias", "X_Z_bias", "Y_Z_bias"),
              target = "bias",
@@ -163,27 +165,13 @@ GCM_debug <- function(data, X_on_Z_reg, Y_on_Z_reg) {
 #' @param data A named list with fields X, Y, Z.
 #' @param X_on_Z_reg The regression method to apply for X|Z.
 #' @param Y_on_Z_reg The regression method to apply for Y|Z.
-#' @param X_on_Z_var The method to obtain the conditional variance of X|Z.
-#' @param resample_family The resampling distribution for CRT
-#' @param no_resample The number of resampling
-#'
+#' @param hyperparams Additional test hyperparameters
+
 #' @return A data frame with columns "parameter," "target," "value" with p-value.
 #' @export
-dCRT <- function(data,
-                   X_on_Z_reg,
-                   Y_on_Z_reg,
-                   test_hyperparams) {
+dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, hyperparams) {
   # TODO: Write a test for this function as follows: Give it a Gaussian resampling
   # distribution, and then compare the output to the MX(2) F-test
-
-  resample_family <- test_hyperparams$resample_family
-  no_resample <- test_hyperparams$no_resample
-  if(is.null(resample_family)){
-    resample_family <- X_on_Z_reg$family
-  }
-  if(is.null(no_resample)){
-    no_resample <- 2000
-  }
 
   # extract X, Y, Z from first input argument
   X <- data$X
@@ -192,17 +180,17 @@ dCRT <- function(data,
   n <- nrow(Z)
 
   # fit conditional mean of X given Z
-  if (X_on_Z_reg == "oracle") {
+  if (X_on_Z_reg$mean_method_type == "oracle") {
     E_X_given_Z <- data$E_X_given_Z_oracle
-    if (is.null(E_X_given_Z)) stop("Must specify cond_mean if X_on_Z_reg is oracle")
+    if (is.null(E_X_given_Z)) stop("Must specify cond_mean if mean_method_type is oracle")
   } else {
     E_X_given_Z <- fit_conditional_mean(X, Z, X_on_Z_reg)
   }
 
   # fit conditional variance of X given Z
-  if (X_on_Z_var == "oracle") {
+  if (X_on_Z_reg$var_method_type == "oracle") {
     Var_X_given_Z <- data$Var_X_given_Z_oracle
-    if (is.null(Var_X_given_Z)) stop("Must specify cond_var if X_on_Z_var is oracle")
+    if (is.null(Var_X_given_Z)) stop("Must specify cond_var if var_method_type is oracle")
   } else {
     Var_X_given_Z <- fit_conditional_variance(X, Z, E_X_given_Z, X_on_Z_reg$var_method_type)
   }
@@ -217,7 +205,10 @@ dCRT <- function(data,
   test_statistic <- 1 / (sqrt(n) * S_hat) * sum(X_residuals * Y_residuals)
 
   # resample matrix from the specified distribution
-  resample_matrix <- resample_dCRT(E_X_given_Z, Var_X_given_Z, no_resample, resample_family)
+  resample_matrix <- resample_dCRT(E_X_given_Z,
+                                   Var_X_given_Z,
+                                   hyperparams$no_resample,
+                                   hyperparams$resample_family)
 
   # compute the residuals and variance vector for each resample
   resample_X_residuals <- resample_matrix - E_X_given_Z

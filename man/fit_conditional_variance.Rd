@@ -13,7 +13,7 @@ fit_conditional_variance(response, features, conditional_mean, method_type)
 
 \item{conditional_mean}{The conditional mean vector of length n}
 
-\item{method}{A string that specifies the variance estimation method to use, e.g. \code{squared_residual}}
+\item{method_type}{A string that specifies the variance estimation method to use, e.g. \code{squared_residual}}
 }
 \value{
 A vector of estimated conditional variances of length n

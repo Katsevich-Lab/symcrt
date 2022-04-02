@@ -6,8 +6,6 @@
 #' @param response A response vector of length n
 #' @param features A design matrix of dimension nxp
 #' @param method   A string that specifies which regression method to use, e.g. \code{OLS} or \code{LASSO}
-#' @param family   A string that specifies the link function e.g.\code{Gaussian} or \code{Binomial}
-#'
 #' @return A vector of fitted conditional means
 #' @export
 fit_conditional_mean <- function(response, features, method) {
@@ -67,7 +65,7 @@ fit_lasso <- function(response, features, hyperparams){
 #' @param response A response vector of length n
 #' @param features A design matrix of dimension nxp
 #' @param conditional_mean The conditional mean vector of length n
-#' @param method A string that specifies the variance estimation method to use, e.g. \code{squared_residual}
+#' @param method_type A string that specifies the variance estimation method to use, e.g. \code{squared_residual}
 #'
 #' @return A vector of estimated conditional variances of length n
 #' @export
@@ -99,14 +97,14 @@ fit_conditional_variance <- function(response, features, conditional_mean, metho
 resample_dCRT <- function(conditional_mean, conditional_variance = NULL, no_resample = 1000, resample_dist) {
   # TODO: Write unit tests for this function
   switch(resample_dist,
-    Binom = {
+    binomial = {
       n <- length(conditional_mean)
       matrix(stats::rbinom(n * no_resample, 1, prob = rep(conditional_mean, no_resample)),
         nrow = n,
         ncol = no_resample
       )
     },
-    Gaussian = {
+    gaussian = {
       n <- length(conditional_mean)
       matrix(stats::rnorm(n * no_resample,
         mean = rep(conditional_mean, no_resample),
@@ -144,7 +142,7 @@ set_default_method_hyperparams <- function(method_type, hyperparams){
            if (is.null(hyperparams$alpha)) {
              hyperparams$alpha <- 1
            }
-           if (is.null(family)) {
+           if (is.null(hyperparams$family)) {
              hyperparams$family <- "gaussian"
            }
          },
@@ -158,7 +156,7 @@ set_default_method_hyperparams <- function(method_type, hyperparams){
            if (is.null(hyperparams$alpha)) {
              hyperparams$alpha <- 1
            }
-           if (is.null(family)) {
+           if (is.null(hyperparams$family)) {
              hyperparams$family <- "gaussian"
            }
          },

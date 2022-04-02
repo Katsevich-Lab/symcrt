@@ -12,8 +12,6 @@ fit_conditional_mean(response, features, method)
 \item{features}{A design matrix of dimension nxp}
 
 \item{method}{A string that specifies which regression method to use, e.g. \code{OLS} or \code{LASSO}}
-
-\item{family}{A string that specifies the link function e.g.\code{Gaussian} or \code{Binomial}}
 }
 \value{
 A vector of fitted conditional means

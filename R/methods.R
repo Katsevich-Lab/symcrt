@@ -165,14 +165,14 @@ GCM_debug <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
 #' @param data A named list with fields X, Y, Z.
 #' @param X_on_Z_reg The regression method to apply for X|Z.
 #' @param Y_on_Z_reg The regression method to apply for Y|Z.
-#' @param hyperparams Additional test hyperparameters
+#' @param test_hyperparams Additional test hyperparameters
 
 #' @return A data frame with columns "parameter," "target," "value" with p-value.
 #' @export
-dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, hyperparams) {
+dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   # TODO: Write a test for this function as follows: Give it a Gaussian resampling
   # distribution, and then compare the output to the MX(2) F-test
-
+  test_hyperparams <- set_default_test_hyperparams("dCRT", test_hyperparams)
   # extract X, Y, Z from first input argument
   X <- data$X
   Y <- data$Y
@@ -205,10 +205,10 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, hyperparams) {
   test_statistic <- 1 / (sqrt(n) * S_hat) * sum(X_residuals * Y_residuals)
 
   # resample matrix from the specified distribution
-  resample_matrix <- resample_dCRT(E_X_given_Z,
-                                   Var_X_given_Z,
-                                   hyperparams$no_resample,
-                                   hyperparams$resample_family)
+  resample_matrix <- resample_dCRT(conditional_mean = E_X_given_Z,
+                                   conditional_variance = Var_X_given_Z,
+                                   no_resample = test_hyperparams$no_resample,
+                                   resample_dist = test_hyperparams$resample_family)
 
   # compute the residuals and variance vector for each resample
   resample_X_residuals <- resample_matrix - E_X_given_Z
@@ -219,7 +219,7 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, hyperparams) {
   no_exceed <- length(which(abs(resample_test_statistic) >= abs(test_statistic)))
 
   # compute the p-value (two sided)
-  p_value <- (no_exceed + 1) / (no_resample + 1)
+  p_value <- (no_exceed + 1) / (test_hyperparams$no_resample + 1)
 
   # output the results
   data.frame(

@@ -4,7 +4,7 @@
 \alias{dCRT}
 \title{The distilled CRT test}
 \usage{
-dCRT(data, X_on_Z_reg, Y_on_Z_reg, hyperparams)
+dCRT(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams)
 }
 \arguments{
 \item{data}{A named list with fields X, Y, Z.}
@@ -13,7 +13,7 @@ dCRT(data, X_on_Z_reg, Y_on_Z_reg, hyperparams)
 
 \item{Y_on_Z_reg}{The regression method to apply for Y|Z.}
 
-\item{hyperparams}{Additional test hyperparameters}
+\item{test_hyperparams}{Additional test hyperparameters}
 }
 \value{
 A data frame with columns "parameter," "target," "value" with p-value.

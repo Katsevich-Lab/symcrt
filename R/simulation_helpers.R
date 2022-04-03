@@ -42,25 +42,25 @@ fast_generate_mvn <- function(mean, covariance, num_samples) {
 #'
 #' @return A response vector of length n
 #' @export
-generate_glm_response_data <- function(design_matrix, coefficients, family){
+generate_glm_response_data <- function(design_matrix, coefficients, family) {
   # obtain the natural parameter for each observation
-  eta = design_matrix %*% coefficients
-  n = length(eta)
+  eta <- design_matrix %*% coefficients
+  n <- length(eta)
 
   # generate mean function and samples based on the family
   switch(family,
-         gaussian = {
-           mu <- eta
-           response <- stats::rnorm(n = n, mean = mu, sd = 1)
-         },
-         binomial = {
-           mu <- exp(eta)/(1+exp(eta))
-           response <- stats::rbinom(n = n, size = 1, prob = mu)
-         },
-         poisson = {
-           mu <- exp(eta)
-           response <- stats::rpois(n = n, lambda = mu)
-         }
+    gaussian = {
+      mu <- eta
+      response <- stats::rnorm(n = n, mean = mu, sd = 1)
+    },
+    binomial = {
+      mu <- exp(eta) / (1 + exp(eta))
+      response <- stats::rbinom(n = n, size = 1, prob = mu)
+    },
+    poisson = {
+      mu <- exp(eta)
+      response <- stats::rpois(n = n, lambda = mu)
+    }
   )
 
   # return the response vector
@@ -74,11 +74,11 @@ generate_glm_response_data <- function(design_matrix, coefficients, family){
 #'
 #' @return A list of simulatr functions whose length is the number of rows of \code{methods_df}.
 #' @export
-generate_method_list <- function(methods_df){
+generate_method_list <- function(methods_df) {
   num_methods <- nrow(methods_df)
   simulatr_functs <- list()
   # loop through methods, which are rows of methods_df
-  for(method_idx in 1:num_methods){
+  for (method_idx in 1:num_methods) {
     # extract the four pieces of information about each method
     test_type <- methods_df$test_type[method_idx]
     X_on_Z_reg <- methods_df$X_on_Z_reg[[method_idx]]
@@ -92,18 +92,29 @@ generate_method_list <- function(methods_df){
     # the method function takes just data as an argument, and call the function
     # test_type (e.g. GCM), after prepending "simulatr::" on data as well as the
     # three pieces of information about the method (X|Z reg, Y|Z reg, hyperparams)
-    method_f <- function(data){
-      do.call(test_type_package,
-              list(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams))
-    }
+    method_f <-
+      local({
+        test_type_package <- test_type_package
+        X_on_Z_reg <- X_on_Z_reg
+        Y_on_Z_reg <- Y_on_Z_reg
+        test_hyperparams <- test_hyperparams
+        function(data) {
+          do.call(
+            test_type_package,
+            list(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams)
+          )
+        }
+      })
     # we also create a name for each method, based on the test type, X|Z method,
     # Y|Z method, and then the row of the methods data frame, the latter to
     # distinguish between the same method with different hyperparameters
-    method_name <- sprintf("%s_%s_%s_%d",
-                           test_type,
-                           X_on_Z_reg$mean_method_type,
-                           Y_on_Z_reg$mean_method_type,
-                           method_idx)
+    method_name <- sprintf(
+      "%s_%s_%s_%d",
+      test_type,
+      X_on_Z_reg$mean_method_type,
+      Y_on_Z_reg$mean_method_type,
+      method_idx
+    )
 
     # define the simulatr function, specifying arg_names = NA_character_, which
     # means that there are no arguments to the method function besides data

@@ -142,6 +142,10 @@ magnitude_detect <- function(data, c, alpha, beta, gamma, eps = 0.0001) {
   res_X_Z <- data$res_X_Z
   res_Y_Z <- data$res_Y_Z
   Z <- data$Z
+  base_confoun <- simulate_confounding(X = Z %*% gamma, Y = Z %*% beta)
+  if(base_confoun*c<0){
+    stop("The sign of target confounding does not match with that of base line!")
+  }
   i <- 1
   confoun_level <- 0
   while (abs(confoun_level-c) > eps) {

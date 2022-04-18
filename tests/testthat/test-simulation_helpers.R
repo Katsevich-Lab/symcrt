@@ -30,11 +30,11 @@ test_that("generate_method_list works", {
     gamma <- 0.3 * nu
 
     # sample Z from multivariate normal
-    Z <- symcrt::fast_generate_mvn(mean = numeric(d), covariance = sig_Z, num_samples = B * n)
+    Z <- utilities::fast_generate_mvn(mean = numeric(d), covariance = sig_Z, num_samples = B * n)
 
     # sample X|Z, Y|Z from linear regression model
-    X <- symcrt::generate_glm_response_data(Z, gamma, "gaussian")
-    Y <- symcrt::generate_glm_response_data(Z, beta, "gaussian")
+    X <- utilities::generate_glm_response_data(Z, gamma, "gaussian")
+    Y <- utilities::generate_glm_response_data(Z, beta, "gaussian")
 
     # generate ground truth mean vectors for oracle methods and debugging
     E_X_given_Z_oracle <- Z %*% gamma
@@ -95,7 +95,7 @@ test_that("generate_method_list works", {
 
 
   # translate method list into a list of simulatr functions
-  method_list <- symcrt::generate_method_list(methods_df)
+  method_list <- generate_method_list(methods_df)
 
   # create simulatr specifier object
   sim_spec <- simulatr::simulatr_specifier(
@@ -132,11 +132,11 @@ test_that("generate_method_list works", {
                          mean_method_hyperparams = list(family = "gaussian"),
                          var_method_type = "homoskedastic")
 
-  true_output_GCM <- symcrt::GCM(data = data[[1]],
+  true_output_GCM <- GCM(data = data[[1]],
                                  X_on_Z_reg = X_on_Z_reg_GCM,
                                  Y_on_Z_reg = Y_on_Z_reg_GCM,
                                  test_hyperparams = NULL)
-  true_output_MX2 <- symcrt::GCM(data = data[[1]],
+  true_output_MX2 <- GCM(data = data[[1]],
                                  X_on_Z_reg = X_on_Z_reg_MX2,
                                  Y_on_Z_reg = Y_on_Z_reg_MX2,
                                  test_hyperparams = NULL)
@@ -158,8 +158,8 @@ test_that("magnitude_detect works", {
   beta[1:5] <- magnitude*(2*rbinom(5, 1, 0.5) - 1)
   gamma <- beta
   rho <- 0.5
-  sig_Z <- generate_cov_ar1(rho = rho, d = p)
-  Z <- symcrt::fast_generate_mvn(mean = numeric(p),
+  sig_Z <- utilities::generate_cov_ar1(rho = rho, d = p)
+  Z <- utilities::fast_generate_mvn(mean = numeric(p),
                                  covariance = sig_Z,
                                  num_samples = n)
   res_X_Z <- rnorm(n)
@@ -167,9 +167,9 @@ test_that("magnitude_detect works", {
   X <- Z %*% gamma + res_X_Z
   Y <- Z %*% beta + res_Y_Z
   data <- list(res_X_Z = res_X_Z, res_Y_Z = res_Y_Z, Z = Z)
-  c <- symcrt::simulate_confounding(X, Y)
+  c <- simulate_confounding(X, Y)
   k_true = 5
-  magnitude_linsearch <- symcrt::magnitude_detect(data = data,
+  magnitude_linsearch <- magnitude_detect(data = data,
                                                   c = c,
                                                   alpha = 0.01,
                                                   beta = beta/k_true,

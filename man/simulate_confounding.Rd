@@ -4,12 +4,14 @@
 \alias{simulate_confounding}
 \title{A function for calculating the confoudning level via simulation}
 \usage{
-simulate_confounding(X, Y)
+simulate_confounding(n, X, Y)
 }
 \arguments{
-\item{X}{A vector of treatment}
+\item{n}{number of samples}
 
-\item{Y}{A vector of outcome}
+\item{X}{A vector of treatment (length may be much larger than n)}
+
+\item{Y}{A vector of outcome (length may be much larger than n)}
 }
 \value{
 The confounding level

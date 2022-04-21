@@ -129,47 +129,80 @@ generate_method_list <- function(methods_df) {
 
 #' A line search algorithm for detecting the magnitude of coefficient reaching the confounding level
 #'
+#' @param n The number of data 
 #' @param data A data list containing the noise vector for X|Z and Y|Z and data matrix Z
 #' @param c The target confounding level
 #' @param alpha The step size when doing line search
 #' @param beta The coefficient vector for Y|Z
 #' @param gamma The coefficient vector for X|Z
 #' @param eps The precision number
+#' @param type The type of response (either Gaussian or Binary)
 #'
 #' @return The magnitude of coefficient reaches the confounding level
 #' @export
-magnitude_detect <- function(data, c, alpha, beta, gamma, eps = 0.0001) {
-  res_X_Z <- data$res_X_Z
-  res_Y_Z <- data$res_Y_Z
+magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type = "Gaussian") {
   Z <- data$Z
-  base_confoun <- simulate_confounding(X = Z %*% gamma, Y = Z %*% beta)
-  if(base_confoun*c<0){
-    stop("The sign of target confounding does not match with that of base line!")
-  }
-  i <- 1
+  B <- nrow(Z)
   confoun_level <- 0
-  while (abs(confoun_level-c) > eps) {
-    kappa <- alpha*i
-    X <- kappa*Z %*% gamma + res_X_Z
-    Y <- kappa*Z %*% beta + res_Y_Z
-    confoun_level <- simulate_confounding(X, Y)
-    i <- i + 1
-    if (i > 1E10){
-      stop("Exceed the maximum iteration!")
-    }
-  }
+  response_type <- type
+  switch(response_type,
+         Gaussian = {
+           base_confoun <- simulate_confounding(n, 
+                                                X = Z %*% gamma + rnorm(B), 
+                                                Y = Z %*% beta + rnorm(B))
+           if(base_confoun*c<0){
+             stop("The sign of target confounding does not match with that of base line!")
+           }
+           i <- 1
+           while (abs(confoun_level-c) > eps) {
+             kappa <- alpha*i
+             X <- kappa*Z %*% gamma + rnorm(B)
+             Y <- kappa*Z %*% beta + rnorm(B)
+             confoun_level <- simulate_confounding(n, X, Y)
+             i <- i + 1
+             if (i > 1E10){
+               stop("Exceed the maximum iteration!")
+             }
+           }
+         },
+         Binary = {
+           X_base <- rbinom(B, 1, exp(Z%*%gamma)/(1+exp(Z%*%gamma)))
+           Y_base <- rbinom(B, 1, exp(Z%*%beta)/(1+exp(Z%*%beta)))
+           base_confoun <- simulate_confounding(n, 
+                                                X = X_base, 
+                                                Y = Y_base)
+           if(base_confoun*c<0){
+             stop("The sign of target confounding does not match with that of base line!")
+           }
+           i <- 1
+           while (abs(confoun_level-c) > eps) {
+             kappa <- alpha*i
+             X <- rbinom(B, 1, exp(kappa*Z %*% gamma)/(1+exp(kappa*Z %*% gamma)))
+             Y <- rbinom(B, 1, exp(kappa*Z %*% beta)/(1+exp(kappa*Z %*% beta)))
+             confoun_level <- simulate_confounding(n, X, Y)
+             print(confoun_level)
+             i <- i + 1
+             if (i > 1E10){
+               stop("Exceed the maximum iteration!")
+             }
+           }
+         },
+         {
+           stop("Invalid specification of response type.")
+         }
+  )
   kappa
 }
 
 #' A function for calculating the confoudning level via simulation
 #'
-#' @param X A vector of treatment
-#' @param Y A vector of outcome
+#' @param n number of samples
+#' @param X A vector of treatment (length may be much larger than n)
+#' @param Y A vector of outcome (length may be much larger than n)
 #'
 #' @return The confounding level
 #' @export
-simulate_confounding <- function(X, Y){
-  n <- length(X)
+simulate_confounding <- function(n, X, Y){
   sqrt(n)*mean(X*Y)/stats::sd(X*Y)
 }
 

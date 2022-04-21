@@ -4,9 +4,20 @@
 \alias{magnitude_detect}
 \title{A line search algorithm for detecting the magnitude of coefficient reaching the confounding level}
 \usage{
-magnitude_detect(data, c, alpha, beta, gamma, eps = 1e-04)
+magnitude_detect(
+  n,
+  data,
+  c,
+  alpha,
+  beta,
+  gamma,
+  eps = 1e-04,
+  type = "Gaussian"
+)
 }
 \arguments{
+\item{n}{The number of data}
+
 \item{data}{A data list containing the noise vector for X|Z and Y|Z and data matrix Z}
 
 \item{c}{The target confounding level}
@@ -18,6 +29,8 @@ magnitude_detect(data, c, alpha, beta, gamma, eps = 1e-04)
 \item{gamma}{The coefficient vector for X|Z}
 
 \item{eps}{The precision number}
+
+\item{type}{The type of response (either Gaussian or Binary)}
 }
 \value{
 The magnitude of coefficient reaches the confounding level

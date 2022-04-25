@@ -117,7 +117,6 @@ magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type 
              X <- rbinom(B, 1, exp(kappa*Z %*% gamma)/(1+exp(kappa*Z %*% gamma)))
              Y <- rbinom(B, 1, exp(kappa*Z %*% beta)/(1+exp(kappa*Z %*% beta)))
              confoun_level <- simulate_confounding(n, X, Y)
-             print(confoun_level)
              i <- i + 1
              if (i > 1E10){
                stop("Exceed the maximum iteration!")
@@ -128,6 +127,7 @@ magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type 
            stop("Invalid specification of response type.")
          }
   )
+  print(kappa)
   kappa
 }
 
@@ -140,6 +140,6 @@ magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type 
 #' @return The confounding level
 #' @export
 simulate_confounding <- function(n, X, Y){
-  sqrt(n)*mean(X*Y)/stats::sd(X*Y)
+  sqrt(n)*mean((X-mean(X))*(Y-mean(Y)))/stats::sd((X-mean(X))*(Y-mean(Y)))
 }
 

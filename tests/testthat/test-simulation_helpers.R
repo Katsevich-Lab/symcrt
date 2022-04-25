@@ -163,23 +163,24 @@ test_that("magnitude_detect works", {
   sig_Z <- katlabutils::generate_cov_ar1(rho = rho, d = p)
   Z <- katlabutils::fast_generate_mvn(mean = numeric(p),
                                  covariance = sig_Z,
-                                 num_samples = n)
-  res_X_Z <- rnorm(n)
-  res_Y_Z <- rnorm(n)
+                                 num_samples = B)
+  res_X_Z <- rnorm(B)
+  res_Y_Z <- rnorm(B)
   X <- Z %*% gamma + res_X_Z
   Y <- Z %*% beta + res_Y_Z
   data <- list(res_X_Z = res_X_Z, res_Y_Z = res_Y_Z, Z = Z)
-  c <- simulate_confounding(X, Y)
+  c <- simulate_confounding(n, X, Y)
   k_true = 5
-  magnitude_linsearch <- magnitude_detect(data = data,
-                                                  c = c,
-                                                  alpha = 0.01,
-                                                  beta = beta/k_true,
-                                                  gamma = gamma/k_true,
-                                                  eps = 0.001)
+  magnitude_linsearch <- magnitude_detect(n = n, 
+                                          data = data,
+                                          c = c,
+                                          alpha = 0.05,
+                                          beta = beta/k_true,
+                                          gamma = gamma/k_true,
+                                          eps = 0.2)
   expect_lt(
     max(abs(magnitude_linsearch - k_true)),
-    0.1
+    0.2
   )
 })
 
@@ -197,7 +198,7 @@ test_that("magnitude_detect works for Binary data", {
   beta[1:5] <- magnitude*(2*rbinom(5, 1, 0.5) - 1)
   gamma <- beta
   rho <- 0.5
-  sig_Z <- generate_cov_ar1(rho = rho, d = p)
+  sig_Z <- katlabutils::generate_cov_ar1(rho = rho, d = p)
   Z <- katlabutils::fast_generate_mvn(mean = numeric(p), 
                                  covariance = sig_Z, 
                                  num_samples = B)
@@ -211,7 +212,7 @@ test_that("magnitude_detect works for Binary data", {
                                                   alpha = 0.05,
                                                   beta = beta/5,
                                                   gamma = gamma/5,
-                                                  eps = 0.01,
+                                                  eps = 0.1,
                                                   type = "Binary")
   expect_lt(
     max(abs(magnitude_linsearch - magnitude)),

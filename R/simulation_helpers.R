@@ -82,19 +82,21 @@ magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type 
   B <- nrow(Z)
   confoun_level <- 0
   response_type <- type
+  predictor.X <- Z %*% gamma
+  predictor.Y <- Z %*% beta
   switch(response_type,
          Gaussian = {
            base_confoun <- simulate_confounding(n, 
-                                                X = Z %*% gamma + rnorm(B), 
-                                                Y = Z %*% beta + rnorm(B))
+                                                X = predictor.X + rnorm(B), 
+                                                Y = predictor.Y + rnorm(B))
            if(base_confoun*c<0){
              stop("The sign of target confounding does not match with that of base line!")
            }
            i <- 1
            while (abs(confoun_level-c) > eps) {
              kappa <- alpha*i
-             X <- kappa*Z %*% gamma + rnorm(B)
-             Y <- kappa*Z %*% beta + rnorm(B)
+             X <- kappa*predictor.X + rnorm(B)
+             Y <- kappa*predictor.Y + rnorm(B)
              confoun_level <- simulate_confounding(n, X, Y)
              i <- i + 1
              if (i > 1E10){
@@ -103,8 +105,8 @@ magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type 
            }
          },
          Binary = {
-           X_base <- rbinom(B, 1, exp(Z%*%gamma)/(1+exp(Z%*%gamma)))
-           Y_base <- rbinom(B, 1, exp(Z%*%beta)/(1+exp(Z%*%beta)))
+           X_base <- rbinom(B, 1, exp(predictor.X)/(1+exp(predictor.X)))
+           Y_base <- rbinom(B, 1, exp(predictor.Y)/(1+exp(predictor.Y)))
            base_confoun <- simulate_confounding(n, 
                                                 X = X_base, 
                                                 Y = Y_base)
@@ -114,8 +116,8 @@ magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type 
            i <- 1
            while (abs(confoun_level-c) > eps) {
              kappa <- alpha*i
-             X <- rbinom(B, 1, exp(kappa*Z %*% gamma)/(1+exp(kappa*Z %*% gamma)))
-             Y <- rbinom(B, 1, exp(kappa*Z %*% beta)/(1+exp(kappa*Z %*% beta)))
+             X <- rbinom(B, 1, exp(kappa*predictor.X)/(1+exp(kappa*predictor.X)))
+             Y <- rbinom(B, 1, exp(kappa*predictor.Y)/(1+exp(kappa*predictor.Y)))
              confoun_level <- simulate_confounding(n, X, Y)
              i <- i + 1
              if (i > 1E10){

@@ -209,7 +209,7 @@ test_that("magnitude_detect works for Binary data", {
   magnitude_linsearch <- magnitude_detect(data = data,
                                                   n = n,
                                                   c = c,
-                                                  alpha = 0.05,
+                                                  alpha = 0.01,
                                                   beta = beta/5,
                                                   gamma = gamma/5,
                                                   eps = 0.1,

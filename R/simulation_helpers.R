@@ -129,7 +129,6 @@ magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type 
            stop("Invalid specification of response type.")
          }
   )
-  print(kappa)
   kappa
 }
 
@@ -145,3 +144,131 @@ simulate_confounding <- function(n, X, Y){
   sqrt(n)*mean((X-mean(X))*(Y-mean(Y)))/stats::sd((X-mean(X))*(Y-mean(Y)))
 }
 
+
+#' Title
+#'
+#' @param grid A data frame containing different combinations of parameters
+#' @param c A vector containing a sequence of confounding level. Default is 1:4
+#' @param B A large number used for simulating confounding level
+#' @param no_nu_grid The number of grid that spread from 0 to the maximum confounding
+#' level which is searched by the algorithm
+#' @param response_type Type of response, Gaussian or Binary
+#'
+#' @return A data frame containing extra two parameters: confounding level and magnitude.
+#' @export
+
+compute_nu <- function(grid, c, B, no_nu_grid, response_type){
+  no_grid <- nrow(grid)
+  nu_mat <- matrix(0, nrow = length(c), ncol = no_grid)
+  for (r in 1:no_grid) {
+    # extract key variables
+    n <- grid$n[r]
+    d <- grid$d[r]
+    s <- grid$s[r]
+    rho <- grid$rho[r]
+    
+    # generate covariance matrix
+    sig <- katlabutils::generate_cov_ar1(rho, d)
+    
+    # base beta and gamma
+    base.beta <- numeric(d)
+    base.beta[1:s] <- 2*rbinom(s, 1, 0.5) - 1
+    base.gamma <- base.beta
+    
+    # generate Z data with B rows
+    Z <- katlabutils::fast_generate_mvn(mean = numeric(d), 
+                                        covariance = sig, 
+                                        num_samples = B)
+    # roughly search the nu corresponding to c_max
+    nu_search <- 0
+    predictor.X <- Z %*% base.gamma
+    predictor.Y <- Z %*% base.beta 
+    c_max <- max(c)
+    switch(response_type,
+           Gaussian = {
+             base_confoun <- simulate_confounding(n, 
+                                                  X = predictor.X + rnorm(B), 
+                                                  Y = predictor.Y + rnorm(B))
+             if(base_confoun*c_max<0){
+               stop("The sign of target confounding does not match with that of base line!")
+             }
+             c_search <- 0
+             while (c_search-c_max < 0) {
+               nu_search <- nu_search + 0.1
+               
+               X <- nu_search*predictor.X + rnorm(B)
+               Y <- nu_search*predictor.Y + rnorm(B)
+               
+               # compute the actual level c based on X, Y
+               c_search <- symcrt::simulate_confounding(n, X, Y)
+             }
+           },
+           Binary = {
+             X_base <- rbinom(B, 1, 1/(1+exp(-predictor.X)))
+             Y_base <- rbinom(B, 1, 1/(1+exp(-predictor.Y)))
+             base_confoun <- simulate_confounding(n, 
+                                                  X = X_base, 
+                                                  Y = Y_base)
+             if(base_confoun*c_max<0){
+               stop("The sign of target confounding does not match with that of base line!")
+             }
+             c_search <- 0
+             while (c_search-c_max < 0) {
+               nu_search <- nu_search + 0.1
+               X <- rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_search*predictor.X)))
+               Y <- rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_search*predictor.Y)))
+               
+               # compute the actual level c based on X, Y
+               c_search <- symcrt::simulate_confounding(n, X, Y)
+             }
+           },
+           {
+             stop("Invalid specification of response type.")
+           }
+    )
+    
+    # generate a sequence of confounding level
+    nu_max <- nu_search
+    nu_seq <- seq(0, nu_max, length.out = no_nu_grid)
+    c_seq <- numeric(length(nu_seq))
+    switch(response_type,
+           Gaussian = {
+             for (k in 1:length(nu_seq)) {
+               # generate X and Y
+               X <- nu_seq[k]*predictor.X + rnorm(B)
+               Y <- nu_seq[k]*predictor.Y + rnorm(B)
+               # generate corresponding confounding level
+               c_seq[k] <- symcrt::simulate_confounding(n, X, Y)
+             }
+           },
+           Binary = {
+             for (k in 1:length(nu_seq)) {
+               # generate X and Y
+               X <- rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_seq[k]*predictor.X)))
+               Y <- rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_seq[k]*predictor.Y)))
+               # generate corresponding confounding level
+               c_seq[k] <- symcrt::simulate_confounding(n, X, Y)
+             }
+           },
+           {
+             stop("Invalid specification of response type.")
+           }
+    )
+    # fit the (c_seq, nu_seq) curve with loess
+    nu_seq <- c(numeric(no_nu_grid), nu_seq)
+    c_seq <- c(numeric(no_nu_grid), c_seq)
+    c_nu <- data.frame(nu = nu_seq, c = c_seq)
+    poly_fit <- stats::loess(nu ~ c, c_nu)
+    nu_mat[,r] <- as.vector(predict(poly_fit, data.frame(c = c), se = FALSE))
+    print(r)
+    print(nu_mat[,r])
+  }
+  
+  # replicate the grid to accomodate c and nu
+  grid <- grid[rep(1:no_grid, each = 5),] 
+  
+  # fill the last two columns with c and nu
+  grid$c <- rep(c, no_grid)
+  grid$nu <- c(nu_mat)
+  grid$grid_id <- 1:nrow(grid)
+}

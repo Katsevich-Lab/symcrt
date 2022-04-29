@@ -87,16 +87,16 @@ magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type 
   switch(response_type,
          Gaussian = {
            base_confoun <- simulate_confounding(n, 
-                                                X = predictor.X + rnorm(B), 
-                                                Y = predictor.Y + rnorm(B))
+                                                X = predictor.X + stats::rnorm(B), 
+                                                Y = predictor.Y + stats::rnorm(B))
            if(base_confoun*c<0){
              stop("The sign of target confounding does not match with that of base line!")
            }
            i <- 1
            while (abs(confoun_level-c) > eps) {
              kappa <- alpha*i
-             X <- kappa*predictor.X + rnorm(B)
-             Y <- kappa*predictor.Y + rnorm(B)
+             X <- kappa*predictor.X + stats::rnorm(B)
+             Y <- kappa*predictor.Y + stats::rnorm(B)
              confoun_level <- simulate_confounding(n, X, Y)
              i <- i + 1
              if (i > 1E10){
@@ -105,8 +105,8 @@ magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type 
            }
          },
          Binary = {
-           X_base <- rbinom(B, 1, exp(predictor.X)/(1+exp(predictor.X)))
-           Y_base <- rbinom(B, 1, exp(predictor.Y)/(1+exp(predictor.Y)))
+           X_base <- stats::rbinom(B, 1, exp(predictor.X)/(1+exp(predictor.X)))
+           Y_base <- stats::rbinom(B, 1, exp(predictor.Y)/(1+exp(predictor.Y)))
            base_confoun <- simulate_confounding(n, 
                                                 X = X_base, 
                                                 Y = Y_base)
@@ -116,8 +116,8 @@ magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type 
            i <- 1
            while (abs(confoun_level-c) > eps) {
              kappa <- alpha*i
-             X <- rbinom(B, 1, exp(kappa*predictor.X)/(1+exp(kappa*predictor.X)))
-             Y <- rbinom(B, 1, exp(kappa*predictor.Y)/(1+exp(kappa*predictor.Y)))
+             X <- stats::rbinom(B, 1, exp(kappa*predictor.X)/(1+exp(kappa*predictor.X)))
+             Y <- stats::rbinom(B, 1, exp(kappa*predictor.Y)/(1+exp(kappa*predictor.Y)))
              confoun_level <- simulate_confounding(n, X, Y)
              i <- i + 1
              if (i > 1E10){
@@ -160,6 +160,8 @@ simulate_confounding <- function(n, X, Y){
 compute_nu <- function(grid, c, B, no_nu_grid, response_type){
   no_grid <- nrow(grid)
   nu_mat <- matrix(0, nrow = length(c), ncol = no_grid)
+  grid$coef_pos <- 0
+  grid$coef_neg <- 0
   for (r in 1:no_grid) {
     # extract key variables
     n <- grid$n[r]
@@ -172,7 +174,7 @@ compute_nu <- function(grid, c, B, no_nu_grid, response_type){
     
     # base beta and gamma
     base.beta <- numeric(d)
-    base.beta[1:s] <- 2*rbinom(s, 1, 0.5) - 1
+    base.beta[1:s] <- 2*stats::rbinom(s, 1, 0.5) - 1
     base.gamma <- base.beta
     
     # generate Z data with B rows
@@ -186,9 +188,9 @@ compute_nu <- function(grid, c, B, no_nu_grid, response_type){
     c_max <- max(c)
     switch(response_type,
            Gaussian = {
-             base_confoun <- simulate_confounding(n, 
-                                                  X = predictor.X + rnorm(B), 
-                                                  Y = predictor.Y + rnorm(B))
+             base_confoun <- symcrt::simulate_confounding(n, 
+                                                  X = predictor.X + stats::rnorm(B), 
+                                                  Y = predictor.Y + stats::rnorm(B))
              if(base_confoun*c_max<0){
                stop("The sign of target confounding does not match with that of base line!")
              }
@@ -196,16 +198,16 @@ compute_nu <- function(grid, c, B, no_nu_grid, response_type){
              while (c_search-c_max < 0) {
                nu_search <- nu_search + 0.1
                
-               X <- nu_search*predictor.X + rnorm(B)
-               Y <- nu_search*predictor.Y + rnorm(B)
+               X <- nu_search*predictor.X + stats::rnorm(B)
+               Y <- nu_search*predictor.Y + stats::rnorm(B)
                
                # compute the actual level c based on X, Y
                c_search <- symcrt::simulate_confounding(n, X, Y)
              }
            },
            Binary = {
-             X_base <- rbinom(B, 1, 1/(1+exp(-predictor.X)))
-             Y_base <- rbinom(B, 1, 1/(1+exp(-predictor.Y)))
+             X_base <- stats::rbinom(B, 1, 1/(1+exp(-predictor.X)))
+             Y_base <- stats::rbinom(B, 1, 1/(1+exp(-predictor.Y)))
              base_confoun <- simulate_confounding(n, 
                                                   X = X_base, 
                                                   Y = Y_base)
@@ -215,8 +217,8 @@ compute_nu <- function(grid, c, B, no_nu_grid, response_type){
              c_search <- 0
              while (c_search-c_max < 0) {
                nu_search <- nu_search + 0.1
-               X <- rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_search*predictor.X)))
-               Y <- rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_search*predictor.Y)))
+               X <- stats::rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_search*predictor.X)))
+               Y <- stats::rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_search*predictor.Y)))
                
                # compute the actual level c based on X, Y
                c_search <- symcrt::simulate_confounding(n, X, Y)
@@ -235,8 +237,8 @@ compute_nu <- function(grid, c, B, no_nu_grid, response_type){
            Gaussian = {
              for (k in 1:length(nu_seq)) {
                # generate X and Y
-               X <- nu_seq[k]*predictor.X + rnorm(B)
-               Y <- nu_seq[k]*predictor.Y + rnorm(B)
+               X <- nu_seq[k]*predictor.X + stats::rnorm(B)
+               Y <- nu_seq[k]*predictor.Y + stats::rnorm(B)
                # generate corresponding confounding level
                c_seq[k] <- symcrt::simulate_confounding(n, X, Y)
              }
@@ -244,8 +246,8 @@ compute_nu <- function(grid, c, B, no_nu_grid, response_type){
            Binary = {
              for (k in 1:length(nu_seq)) {
                # generate X and Y
-               X <- rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_seq[k]*predictor.X)))
-               Y <- rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_seq[k]*predictor.Y)))
+               X <- stats::rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_seq[k]*predictor.X)))
+               Y <- stats::rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_seq[k]*predictor.Y)))
                # generate corresponding confounding level
                c_seq[k] <- symcrt::simulate_confounding(n, X, Y)
              }
@@ -259,16 +261,22 @@ compute_nu <- function(grid, c, B, no_nu_grid, response_type){
     c_seq <- c(numeric(no_nu_grid), c_seq)
     c_nu <- data.frame(nu = nu_seq, c = c_seq)
     poly_fit <- stats::loess(nu ~ c, c_nu)
-    nu_mat[,r] <- as.vector(predict(poly_fit, data.frame(c = c), se = FALSE))
-    print(r)
-    print(nu_mat[,r])
+    nu_mat[,r] <- as.vector(stats::predict(poly_fit, data.frame(c = c), se = FALSE))
+    # force nu=0 when c =0
+    if(0 %in% c){
+      pos <- which(c == 0)
+      nu_mat[pos, r] <- 0
+    }
+    grid$coef_pos[r] <- list(which(base.beta > 0))
+    grid$coef_neg[r] <- list(setdiff(1:s, which(base.beta > 0)))
   }
   
   # replicate the grid to accomodate c and nu
-  grid <- grid[rep(1:no_grid, each = 5),] 
+  grid <- grid[rep(1:no_grid, each = length(c)),] 
   
   # fill the last two columns with c and nu
   grid$c <- rep(c, no_grid)
   grid$nu <- c(nu_mat)
   grid$grid_id <- 1:nrow(grid)
+  grid
 }

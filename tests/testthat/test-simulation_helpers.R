@@ -221,3 +221,44 @@ test_that("magnitude_detect works for Binary data", {
 })
 
 
+
+
+test_that("compute_nu works for Gaussian data", {
+  # check whether the correct magnitude can be detected
+  set.seed(1)
+  n <- 50
+  B <- 10000
+  d <- 500
+  rho <- 0.5
+  s <- 5
+  c <- seq(0,4,0.2)
+  grid <- data.frame(n = n, d = d, s = s, rho = rho)
+  grid_new <- symcrt::compute_nu(grid = grid, 
+                                 c = c, 
+                                 B = B, 
+                                 no_nu_grid = 2000, 
+                                 response_type = "Gaussian")
+  beta_base <- numeric(d)
+  beta_base[grid_new$coef_pos[[1]]] <- 1
+  beta_base[grid_new$coef_neg[[1]]] <- -1
+  c_recover <- numeric(length(c))
+  # generate covariance matrix and design matrix
+  sig <- katlabutils::generate_cov_ar1(rho, d)
+  Z <- katlabutils::fast_generate_mvn(mean = numeric(d), 
+                                      covariance = sig, 
+                                      num_samples = B)
+  for (k in 1:length(c)) {
+    beta <- beta_base*grid_new$nu[k]
+    gamma <- beta
+    X <- Z%*%gamma + rnorm(B)
+    Y <- Z%*%beta + rnorm(B)
+    c_recover[k] <- symcrt::simulate_confounding(n, X, Y)
+  }
+  expect_lt(
+    max(abs(c - c_recover)),
+    0.3
+  )
+})
+
+
+

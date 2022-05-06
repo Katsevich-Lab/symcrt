@@ -111,7 +111,7 @@ test_that("fit_conditional_mean works for PLASSO", {
     response = response,
     features = features,
     method = method
-  )
+  )$conditional_mean
   expect_lt(
     mean(abs(true_fitted - conditional_mean)^2),
     0.05
@@ -146,7 +146,7 @@ test_that("fit_conditional_mean works for MLE", {
     response = response,
     features = features,
     method = method
-  )
+  )$conditional_mean
   expect_lt(
     mean(abs(true_fitted - conditional_mean)^2),
     0.05
@@ -193,7 +193,7 @@ test_that("fit_conditional_mean works for PMLE", {
     response = response,
     features = features,
     method = method
-  )
+  )$conditional_mean
   expect_lt(
     mean(abs(true_fitted - conditional_mean)^2),
     0.05

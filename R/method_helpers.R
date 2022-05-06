@@ -15,16 +15,19 @@ fit_conditional_mean <- function(response, features, method) {
   switch(method_type,
     MLE = {
       GLM_fit <- stats::glm(response ~ features, family = hyperparams$family)
-      GLM_fit$fitted.values |> unname()
+      list(conditional_mean = GLM_fit$fitted.values,
+           coef_vec = GLM_fit$coefficients[-1])
     },
     LASSO = {
       lasso_fit <- fit_lasso(response, features, hyperparams)
       # generate predictions
-      stats::predict(lasso_fit,
-        newx = features,
-        type = "response",
-        s = hyperparams$s,
-      ) |> as.vector()
+      list(conditional_mean = as.vector(stats::predict(lasso_fit,
+                                             newx = features,
+                                             type = "response",
+                                             s = hyperparams$s)),
+           coef_vec = stats::coef(lasso_fit, s = hyperparams$s)
+           )
+      
     },
     PLASSO = {
       lasso_fit <- fit_lasso(response, features, hyperparams)
@@ -35,7 +38,8 @@ fit_conditional_mean <- function(response, features, method) {
       } else {
         glm_fit <- stats::glm(response ~ features[, act_set], family = hyperparams$family)
       }
-      glm_fit$fitted.values |> unname()
+      list(conditional_mean = glm_fit$fitted.values,
+           coef_vec = glm_fit$coefficients[-1])
     },
     zero = {
       # wrong estimate!
@@ -188,6 +192,18 @@ set_default_test_hyperparams <- function(method_type, hyperparams){
            }
            if(is.null(hyperparams$no_resample)){
              hyperparams$no_resample <- 2000
+           }
+           if(is.null(hyperparams$unlabel_prop)){
+             hyperparams$unlabel_prop <- 0
+           }
+           if(is.null(hyperparams$holdout_prop)){
+             hyperparams$holdout_prop <- 0
+           }
+           if(is.null(hyperparams$g_Z_support)){
+             hyperparams$g_Z_support <- "support of beta_hat"
+           }
+           if(hyperparams$holdout_prop + hyperparams$unlabel_prop >= 1){
+             stop("The number of unlablled and holdout data exceeds the total number of data!")
            }
          },
          MX2_F_test = {

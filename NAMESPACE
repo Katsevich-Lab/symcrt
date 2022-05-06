@@ -3,6 +3,7 @@
 export(GCM)
 export(GCM_debug)
 export(MX2_F_test)
+export(MaxwayCRT)
 export(compute_nu)
 export(dCRT)
 export(fit_conditional_mean)

@@ -16,7 +16,7 @@ fit_conditional_mean <- function(response, features, method) {
     MLE = {
       GLM_fit <- stats::glm(response ~ features, family = hyperparams$family)
       list(conditional_mean = GLM_fit$fitted.values,
-           coef_vec = GLM_fit$coefficients[-1])
+           coef_vec = as.vector(GLM_fit$coefficients))
     },
     LASSO = {
       lasso_fit <- fit_lasso(response, features, hyperparams)
@@ -25,7 +25,7 @@ fit_conditional_mean <- function(response, features, method) {
                                              newx = features,
                                              type = "response",
                                              s = hyperparams$s)),
-           coef_vec = stats::coef(lasso_fit, s = hyperparams$s)
+           coef_vec = as.vector(stats::coef(lasso_fit, s = hyperparams$s))
            )
       
     },
@@ -39,7 +39,7 @@ fit_conditional_mean <- function(response, features, method) {
         glm_fit <- stats::glm(response ~ features[, act_set], family = hyperparams$family)
       }
       list(conditional_mean = glm_fit$fitted.values,
-           coef_vec = glm_fit$coefficients[-1])
+           coef_vec = as.vector(glm_fit$coefficients))
     },
     zero = {
       # wrong estimate!
@@ -200,7 +200,7 @@ set_default_test_hyperparams <- function(method_type, hyperparams){
              hyperparams$holdout_prop <- 0
            }
            if(is.null(hyperparams$g_Z_support)){
-             hyperparams$g_Z_support <- "support of beta_hat"
+             hyperparams$g_Z_support <- "default"
            }
            if(hyperparams$holdout_prop + hyperparams$unlabel_prop >= 1){
              stop("The number of unlablled and holdout data exceeds the total number of data!")
@@ -212,3 +212,19 @@ set_default_test_hyperparams <- function(method_type, hyperparams){
   )
   hyperparams
 }
+
+
+#' Title
+#'
+#' @param gZ The predictor vector
+#' @param Z_sub The submatrix selected by user for g(Z)
+#'
+#' @return A converted, stacked g(Z)
+#' @export
+
+orthogonalize <- function(gZ, Z_sub){
+  model.fit <- lm(gZ ~ Z_sub)
+  Z_convert <- cbind(Z_sub, model.fit$residual)
+  return(Z_convert)
+}
+

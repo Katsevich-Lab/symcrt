@@ -55,11 +55,18 @@ fit_conditional_mean <- function(response, features, method) {
 # TODO: document this function
 fit_lasso <- function(response, features, hyperparams){
   # run lasso
-  glmnet::cv.glmnet(x = features,
-                    y = response,
-                    nfolds = hyperparams$nfolds,
-                    alpha = hyperparams$alpha,
-                    family = hyperparams$family)
+  if(hyperparams$nfolds*3 > length(response)){
+    glmnet::cv.glmnet(x = features,
+                      y = response,
+                      alpha = hyperparams$alpha,
+                      family = hyperparams$family)
+  }else{
+    glmnet::cv.glmnet(x = features,
+                      y = response,
+                      nfolds = hyperparams$nfolds,
+                      alpha = hyperparams$alpha,
+                      family = hyperparams$family) 
+  }
 }
 
 # helper function to fit a conditional variance of a response (could be Y or X) on
@@ -226,5 +233,27 @@ orthogonalize <- function(gZ, Z_sub){
   model.fit <- lm(gZ ~ Z_sub)
   Z_convert <- cbind(Z_sub, model.fit$residual)
   return(Z_convert)
+}
+
+#' Logit function
+#'
+#' @param x Input
+#'
+#' @return Logit value
+#' @export
+
+logit <- function(x){
+  return(log(x / (1 - x)))
+}
+
+#' Inverse logit function (expit)
+#'
+#' @param x Input
+#'
+#' @return Expit output
+#' @export
+
+glogit <- function(x){
+  return(1 / (1 + exp(-x)))
 }
 

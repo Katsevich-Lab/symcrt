@@ -127,20 +127,20 @@ test_that("GCM_debug works", {
     dplyr::select(value) |> 
     unname() |> as.matrix()
   expect_lt(max(abs(GCM_bias - oracle_bias)),
-            0.1)
+            0.2)
 })
 
 
 
 
-test_that("MaxwayCRT works", {
+test_that("MaxwayCRT works for Gaussian", {
   
   # test whether a specific example gives exactly the right answer
   # (generated using dput)
   source("function.R")
   set.seed(1)
-  n <- 50
-  d <- 200
+  n <- 100
+  d <- 1000
   s <- 5
   gamma <- numeric(d)
   gamma[1:s] <- 2 * rbinom(s, 1, 0.5) - 1
@@ -211,7 +211,7 @@ test_that("MaxwayCRT works", {
   Molei_MaxwayCRT <- MaxwayCRT$Maxway_d0CRT_pvl
   expect_lt(
     abs(Molei_MaxwayCRT - p_value_MaxwayCRT),
-    0.1
+    0.05
   )
 })
 

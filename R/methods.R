@@ -310,8 +310,8 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   predictor_Y_Z_unlabel <- cbind(1, Z[index_unlabel, ])%*%coef_Y_given_Z
   predictor_Y_Z_test <- cbind(1, Z[index_test, ])%*%coef_Y_given_Z
   if(length(act_set_Y_given_Z) == 0){
-    g_Z_unlabel <- rnorm(length(index_unlabel))
-    g_Z_test <- rnorm(length(index_test))
+    g_Z_unlabel <- stats::rnorm(length(index_unlabel))
+    g_Z_test <- stats::rnorm(length(index_test))
   }else{
     g_Z_unlabel <- orthogonalize(predictor_Y_Z_unlabel, Z[index_unlabel, act_set_Y_given_Z])
     g_Z_test <- orthogonalize(predictor_Y_Z_test, Z[index_test, act_set_Y_given_Z])
@@ -400,12 +400,12 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
            X_residuals <- r_label - cbind(1, g_Z_test)%*%coef_residual_on_g
 
            # compute p_value
-           X_residuals <- X_residuals/sd(X_residuals)
+           X_residuals <- X_residuals/(stats::sd(X_residuals))
            Y_residuals <- c(Y[index_test] - E_Y_given_Z_test)
            n_test <- length(X_residuals)
            imp_obe <- abs(mean(X_residuals * Y_residuals))
            emp_var <- mean(Y_residuals^2)
-           p_value <- 2 * pnorm(- sqrt(n_test) * imp_obe / sqrt(emp_var))
+           p_value <- 2 * stats::pnorm(- sqrt(n_test) * imp_obe / sqrt(emp_var))
 
            # # resample matrix from the specified distribution
            # resample_mean <- cbind(1, g_Z_test)%*%(fit_residual_g_Z$coef_vec)

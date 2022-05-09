@@ -230,7 +230,7 @@ set_default_test_hyperparams <- function(method_type, hyperparams){
 #' @export
 
 orthogonalize <- function(gZ, Z_sub){
-  model.fit <- lm(gZ ~ Z_sub)
+  model.fit <- stats::lm(gZ ~ Z_sub)
   Z_convert <- cbind(Z_sub, model.fit$residual)
   return(Z_convert)
 }

@@ -339,8 +339,9 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   predictor_Y_Z_unlabel <- cbind(1, Z_unlabel)%*%coef_Y_given_Z
   predictor_Y_Z_test <- cbind(1, Z[index_test, ])%*%coef_Y_given_Z
   if(length(act_set_Y_given_Z) == 0){
-    g_Z_unlabel <- stats::rnorm(no_unlabel)
-    g_Z_test <- stats::rnorm(length(index_test))
+    g_Z_unlabel <- "zero"
+    # g_Z_unlabel <- stats::rnorm(no_unlabel)
+    # g_Z_test <- stats::rnorm(length(index_test))
   }else{
     g_Z_unlabel <- orthogonalize(predictor_Y_Z_unlabel, Z_unlabel[, act_set_Y_given_Z])
     g_Z_test <- orthogonalize(predictor_Y_Z_test, Z[index_test, act_set_Y_given_Z])
@@ -382,9 +383,13 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
            #                         mean_method_hyperparams = list(family = "binomial"),
            #                         var_method_type = "homoskedastic")
            # fit_X_on_g_h <- fit_conditional_mean(X_unlabel, g_h_Z_unlabel, residual_on_g_h)
-           fit_X_on_g_h <- stats::glm(X_unlabel ~ g_Z_unlabel, offset = logit(E_X_given_Z), family = "binomial")
-           # resample matrix from the specified distribution
-           resample_mean <- glogit(logit(E_X_given_Z_test) + as.vector(cbind(1, g_Z_test)%*%(fit_X_on_g_h$coefficients)))
+           if(any(g_Z_unlabel == "zero")){
+             resample_mean <- E_X_given_Z_test
+           }else{
+             fit_X_on_g_h <- stats::glm(X_unlabel ~ g_Z_unlabel, offset = logit(E_X_given_Z), family = "binomial")
+             # resample matrix from the specified distribution
+             resample_mean <- glogit(logit(E_X_given_Z_test) + as.vector(cbind(1, g_Z_test)%*%(fit_X_on_g_h$coefficients)))
+           }
            resample_var <- resample_mean*(1-resample_mean)
            resample_matrix <- resample_dCRT(conditional_mean = resample_mean,
                                             conditional_variance = resample_var,
@@ -415,18 +420,22 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
            r_label <- X[index_test] - cbind(1, Z[index_test, ])%*%coef_X_given_Z
            E_X_given_Z_test <- cbind(1, Z[index_test, ])%*%coef_X_given_Z
 
-           # fit the residual and g(Z) with lasso
-           residual_on_gZ <- list(mean_method_type = "MLE",
-                                  mean_method_hyperparams = list(family = "gaussian"),
-                                  var_method_type = "homoskedastic")
-
-           fit_residual_g_Z <- fit_conditional_mean(r_unlabel, g_Z_unlabel, residual_on_gZ)
-           Var_residual_g_Z <- fit_conditional_variance(r_unlabel,
-                                                        g_Z_unlabel,
-                                                        fit_residual_g_Z$conditional_mean,
-                                                        X_on_Z_reg$var_method_type)
-           coef_residual_on_g <- fit_residual_g_Z$coef_vec
-           X_residuals <- r_label - cbind(1, g_Z_test)%*%coef_residual_on_g
+           if(any(g_Z_unlabel == "zero")){
+             X_residuals <- r_label - rep(mean(r_label), length(r_label))
+           }else{
+             # fit the residual and g(Z) with lasso
+             residual_on_gZ <- list(mean_method_type = "MLE",
+                                    mean_method_hyperparams = list(family = "gaussian"),
+                                    var_method_type = "homoskedastic")
+             
+             fit_residual_g_Z <- fit_conditional_mean(r_unlabel, g_Z_unlabel, residual_on_gZ)
+             Var_residual_g_Z <- fit_conditional_variance(r_unlabel,
+                                                          g_Z_unlabel,
+                                                          fit_residual_g_Z$conditional_mean,
+                                                          X_on_Z_reg$var_method_type)
+             coef_residual_on_g <- fit_residual_g_Z$coef_vec
+             X_residuals <- r_label - cbind(1, g_Z_test)%*%coef_residual_on_g
+           }
 
            # compute p_value
            X_residuals <- X_residuals/(stats::sd(X_residuals))

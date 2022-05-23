@@ -174,6 +174,7 @@ compute_nu <- function(grid, c, B, no_nu_grid, response_type){
     
     # base beta and gamma
     base.beta <- numeric(d)
+    set.seed(s)
     base.beta[1:s] <- 2*stats::rbinom(s, 1, 0.5) - 1
     base.gamma <- base.beta
     

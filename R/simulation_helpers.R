@@ -46,8 +46,9 @@ generate_method_list <- function(methods_df) {
     # Y|Z method, and then the row of the methods data frame, the latter to
     # distinguish between the same method with different hyperparameters
     method_name <- sprintf(
-      "%s_%s_%s_%d",
+      "%s_%s_%s_%s_%d",
       test_type,
+      test_hyperparams$way_to_learn,
       X_on_Z_reg$mean_method_type,
       Y_on_Z_reg$mean_method_type,
       method_idx

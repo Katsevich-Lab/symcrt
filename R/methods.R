@@ -75,20 +75,39 @@ MX2_F_test <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
 #'
 #' @export
 GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
+  # set the default hyperparameters
+  test_hyperparams <- set_default_test_hyperparams("dCRT", test_hyperparams)
+  # extract the unlabel data
+  if(test_hyperparams$way_to_learn == "semi-supervised"){
+    if(is.null(X_unlabel)){
+      stop("Unlabel data should be provided!")
+    }else{
+      X_unlabel <- as.matrix(data$X_unlabel)
+      Z_unlabel <- as.matrix(data$Z_unlabel) 
+    }
+  }else{
+    X_unlabel <- NULL
+    Z_unlabel <- NULL
+  }
   # extract X, Y, Z from first input argument
   X <- data$X
   Y <- data$Y
   Z <- data$Z
   n <- nrow(Z)
+  
+  # union the unlabel data and label data
+  combine_X <- rbind(as.matrix(X), X_unlabel)
+  combine_Z <- rbind(as.matrix(Z), Z_unlabel)
 
   # fit conditional mean of X given Z
-  E_X_given_Z <- fit_conditional_mean(X, Z, X_on_Z_reg)$conditional_mean
+  E_X_given_Z <- fit_conditional_mean(combine_X, combine_Z, X_on_Z_reg)$conditional_mean
+  E_X_given_Z_label <- E_X_given_Z[1:length(X)]
 
   # fit conditional mean of Y given Z
   E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg)$conditional_mean
 
   # define the test statistic
-  X_residuals <- X - E_X_given_Z
+  X_residuals <- X - E_X_given_Z_label
   Y_residuals <- Y - E_Y_given_Z
   R <- X_residuals * Y_residuals
   test_statistic <- sqrt(n) * mean(R) / sqrt(mean(R^2) - (mean(R))^2)
@@ -173,45 +192,66 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   # TODO: Write a test for this function as follows: Give it a Gaussian resampling
   # distribution, and then compare the output to the MX(2) F-test
   test_hyperparams <- set_default_test_hyperparams("dCRT", test_hyperparams)
+  
+  if(test_hyperparams$way_to_learn == "semi-supervised"){
+    if(is.null(X_unlabel)){
+      stop("Unlabel data should be provided!")
+    }else{
+      X_unlabel <- as.matrix(data$X_unlabel)
+      Z_unlabel <- as.matrix(data$Z_unlabel) 
+    }
+  }else{
+    X_unlabel <- NULL
+    Z_unlabel <- NULL
+  }
+  
   # extract X, Y, Z from first input argument
   X <- data$X
   Y <- data$Y
   Z <- data$Z
   n <- nrow(Z)
+  
+  # union the unlabel data and label data
+  combine_X <- rbind(as.matrix(X), X_unlabel)
+  combine_Z <- rbind(as.matrix(Z), Z_unlabel)
 
   # fit conditional mean of X given Z
   if (X_on_Z_reg$mean_method_type == "oracle") {
     E_X_given_Z <- data$E_X_given_Z_oracle
+    E_X_given_Z_label <- E_X_given_Z[1:length(X)]
     if (is.null(E_X_given_Z)) stop("Must specify cond_mean if mean_method_type is oracle")
   } else {
-    E_X_given_Z <- fit_conditional_mean(X, Z, X_on_Z_reg)$conditional_mean
+    E_X_given_Z <- fit_conditional_mean(combine_X, combine_Z, X_on_Z_reg)$conditional_mean
+    E_X_given_Z_label <- E_X_given_Z[1:length(X)]
   }
 
   # fit conditional variance of X given Z
   if (X_on_Z_reg$var_method_type == "oracle") {
     Var_X_given_Z <- data$Var_X_given_Z_oracle
+    Var_X_given_Z_label <- Var_X_given_Z[1:length(X)]
     if (is.null(Var_X_given_Z)) stop("Must specify cond_var if var_method_type is oracle")
   } else {
-    Var_X_given_Z <- fit_conditional_variance(X, Z, E_X_given_Z, X_on_Z_reg$var_method_type)
+    Var_X_given_Z <- fit_conditional_variance(combine_X, combine_Z, E_X_given_Z, X_on_Z_reg$var_method_type)
+    Var_X_given_Z_label <- Var_X_given_Z[1:length(X)]
   }
 
-  # fit conditional mean of Y given Z
+  # fit conditional mean of Y given Z with labeled data
   E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg)$conditional_mean
 
-  # define the test statistic
-  X_residuals <- c(X - E_X_given_Z)
+  # define the test statistic with labeled data
+  X_residuals <- c(X - E_X_given_Z_label)
   Y_residuals <- c(Y - E_Y_given_Z)
-  S_hat <- sqrt(mean(Var_X_given_Z * Y_residuals^2))
+  S_hat <- sqrt(mean(Var_X_given_Z_label * Y_residuals^2))
   test_statistic <- 1 / (sqrt(n) * S_hat) * sum(X_residuals * Y_residuals)
 
   # resample matrix from the specified distribution
-  resample_matrix <- resample_dCRT(conditional_mean = E_X_given_Z,
-                                   conditional_variance = Var_X_given_Z,
+  resample_matrix <- resample_dCRT(conditional_mean = E_X_given_Z_label,
+                                   conditional_variance = Var_X_given_Z_label,
                                    no_resample = test_hyperparams$no_resample,
                                    resample_dist = test_hyperparams$resample_family)
 
   # compute the residuals and variance vector for each resample
-  resample_X_residuals <- resample_matrix - E_X_given_Z
+  resample_X_residuals <- resample_matrix - E_X_given_Z_label
   residual_star <- apply(resample_X_residuals * Y_residuals, 2, sum)
 
   # compute the resample test statistic and quantile

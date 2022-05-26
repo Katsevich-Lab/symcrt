@@ -188,7 +188,9 @@ set_default_method_hyperparams <- function(method_type, hyperparams){
 set_default_test_hyperparams <- function(method_type, hyperparams){
   switch(method_type,
          GCM={
-           # currently no hyperparams
+           if(is.null(hyperparams$way_to_learn)){
+             hyperparams$way_to_learn <- "supervised"
+           }
          },
          GCM_debug={
            # currently no hyperparams
@@ -199,6 +201,9 @@ set_default_test_hyperparams <- function(method_type, hyperparams){
            }
            if(is.null(hyperparams$no_resample)){
              hyperparams$no_resample <- 2000
+           }
+           if(is.null(hyperparams$way_to_learn)){
+             hyperparams$way_to_learn <- "supervised"
            }
            if(is.null(hyperparams$unlabel_prop)){
              hyperparams$unlabel_prop <- 0
@@ -214,7 +219,9 @@ set_default_test_hyperparams <- function(method_type, hyperparams){
            }
          },
          MX2_F_test = {
-           # currently no hyperparams
+           if(is.null(hyperparams$way_to_learn)){
+             hyperparams$way_to_learn <- "supervised"
+           }
          }
   )
   hyperparams

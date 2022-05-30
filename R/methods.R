@@ -79,7 +79,7 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   test_hyperparams <- set_default_test_hyperparams("dCRT", test_hyperparams)
   # extract the unlabel data
   if(test_hyperparams$way_to_learn == "semi-supervised"){
-    if(is.null(X_unlabel)){
+    if(is.null(data$X_unlabel)){
       stop("Unlabel data should be provided!")
     }else{
       X_unlabel <- as.matrix(data$X_unlabel)
@@ -194,7 +194,7 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   test_hyperparams <- set_default_test_hyperparams("dCRT", test_hyperparams)
   
   if(test_hyperparams$way_to_learn == "semi-supervised"){
-    if(is.null(X_unlabel)){
+    if(is.null(data$X_unlabel)){
       stop("Unlabel data should be provided!")
     }else{
       X_unlabel <- as.matrix(data$X_unlabel)

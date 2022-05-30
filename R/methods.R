@@ -78,12 +78,12 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   # set the default hyperparameters
   test_hyperparams <- set_default_test_hyperparams("dCRT", test_hyperparams)
   # extract the unlabel data
-  if(test_hyperparams$way_to_learn == "semi-supervised"){
+  if(test_hyperparams$way_to_learn == "semi_supervised"){
     if(is.null(data$X_unlabel)){
       stop("Unlabel data should be provided!")
     }else{
       X_unlabel <- as.matrix(data$X_unlabel)
-      Z_unlabel <- as.matrix(data$Z_unlabel) 
+      Z_unlabel <- as.matrix(data$Z_unlabel)
     }
   }else{
     X_unlabel <- NULL
@@ -94,7 +94,7 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   Y <- data$Y
   Z <- data$Z
   n <- nrow(Z)
-  
+
   # union the unlabel data and label data
   combine_X <- rbind(as.matrix(X), X_unlabel)
   combine_Z <- rbind(as.matrix(Z), Z_unlabel)
@@ -192,25 +192,25 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   # TODO: Write a test for this function as follows: Give it a Gaussian resampling
   # distribution, and then compare the output to the MX(2) F-test
   test_hyperparams <- set_default_test_hyperparams("dCRT", test_hyperparams)
-  
-  if(test_hyperparams$way_to_learn == "semi-supervised"){
+
+  if(test_hyperparams$way_to_learn == "semi_supervised"){
     if(is.null(data$X_unlabel)){
       stop("Unlabel data should be provided!")
     }else{
       X_unlabel <- as.matrix(data$X_unlabel)
-      Z_unlabel <- as.matrix(data$Z_unlabel) 
+      Z_unlabel <- as.matrix(data$Z_unlabel)
     }
   }else{
     X_unlabel <- NULL
     Z_unlabel <- NULL
   }
-  
+
   # extract X, Y, Z from first input argument
   X <- data$X
   Y <- data$Y
   Z <- data$Z
   n <- nrow(Z)
-  
+
   # union the unlabel data and label data
   combine_X <- rbind(as.matrix(X), X_unlabel)
   combine_Z <- rbind(as.matrix(Z), Z_unlabel)
@@ -291,42 +291,42 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   d <- ncol(Z)
   if(test_hyperparams$unlabel_prop == 0){
     X_unlabel <- data$X_unlabel
-    Z_unlabel <- data$Z_unlabel 
+    Z_unlabel <- data$Z_unlabel
     no_unlabel <- nrow(Z_unlabel)
     index_unlabel <- sample(1:n, no_unlabel)
-    
+
     if(is.null(X_unlabel)){
       stop("Unlabel data should be provided!")
     }
-    
+
     # extract the proportion of the number of holdout data and sample 1:n
     no_holdout <- round(n*test_hyperparams$holdout_prop)
     index_holdout <- sample(1:n, no_holdout)
-    
+
     # extract the index that used for testing
     index_test <- setdiff(1:n, index_holdout)
   }else{
     # extract the proportion of the number of unlabelled data and sample 1:n
     no_unlabel <- round(n*test_hyperparams$unlabel_prop)
     index_unlabel <- sample(1:n, no_unlabel)
-    
+
     # assign the unlabel data
     X_unlabel <- X[index_unlabel]
     Z_unlabel <- Z[index_unlabel, ]
-    
+
     # find the rest data index
     index_rest <- setdiff(1:n, index_unlabel)
-    
+
     # extract the proportion of the number of holdout data and sample 1:n
     no_holdout <- round(n*test_hyperparams$holdout_prop)
     index_holdout <- sample(index_rest, no_holdout)
-    
+
     # extract the index that used for testing
     index_test <- setdiff(index_rest, index_holdout)
   }
 
-  
-  
+
+
 
 
 
@@ -467,7 +467,7 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
              residual_on_gZ <- list(mean_method_type = "MLE",
                                     mean_method_hyperparams = list(family = "gaussian"),
                                     var_method_type = "homoskedastic")
-             
+
              fit_residual_g_Z <- fit_conditional_mean(r_unlabel, g_Z_unlabel, residual_on_gZ)
              Var_residual_g_Z <- fit_conditional_variance(r_unlabel,
                                                           g_Z_unlabel,

@@ -41,10 +41,15 @@ fit_conditional_mean <- function(response, features, method) {
       list(conditional_mean = glm_fit$fitted.values,
            coef_vec = as.vector(glm_fit$coefficients))
     },
+    naive = {
+      # provide unconditional expectation
+      n <- length(response)
+      list(conditional_mean = rep(mean(response), n))
+    },
     zero = {
       # wrong estimate!
       n <- nrow(features)
-      numeric(n)
+      list(conditional_mean = numeric(n))
     },
     {
       stop("Invalid specification of regression method.")

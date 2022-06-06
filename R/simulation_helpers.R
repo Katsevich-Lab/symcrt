@@ -145,6 +145,21 @@ simulate_confounding <- function(n, X, Y){
   sqrt(n)*mean((X-mean(X))*(Y-mean(Y)))/stats::sd((X-mean(X))*(Y-mean(Y)))
 }
 
+#' A function for calculating the approximation power for oracle GCM
+#'
+#' @param n number of samples
+#' @param X A vector of treatment (length may be much larger than n)
+#' @param Y A vector of outcome (length may be much larger than n)
+#' @param E_X_given_Z A vector of conditional expectation of X|Z
+#' @param E_Y_given_Z A vector of conditional expectation of Y|Z
+#'
+#' @return A number representing the power
+#' @export
+
+simulate_power <- function(n, X, Y, E_X_given_Z, E_Y_given_Z){
+  sqrt(n)*mean((X - E_X_given_Z)*(Y - E_Y_given_Z))/stats::sd((X - E_X_given_Z)*(Y - E_Y_given_Z))
+}
+
 
 #' Title
 #'
@@ -281,4 +296,253 @@ compute_nu <- function(grid, c, B, no_nu_grid, response_type){
   grid$nu <- c(nu_mat)
   grid$grid_id <- 1:nrow(grid)
   grid
+}
+
+#' Compute the sequence of nu according to presepcfied level of type_I error
+#'
+#' @param maxType_I A maximum value of type_I error we want to reach
+#' @param alpha Level of test
+#' @param test_type One side or Two side
+#' @param grid The original parameter grid without nu
+#' @param no_nu Number of nu we want
+#' @param B Monte Carlo times
+#' @param response_type Gaussian or Binary
+#'
+#' @return A new parameter grid with extra column of nu
+#' @export
+
+compute_nu_via_Type_I <- function(maxType_I, alpha, test_type, grid, no_nu, B, response_type){
+  no_grid <- nrow(grid)
+  nu_mat <- matrix(0, nrow = no_nu, ncol = no_grid)
+  grid$coef_pos <- 0
+  grid$coef_neg <- 0
+  for (r in 1:no_grid) {
+    # extract key variables
+    n <- grid$n[r]
+    d <- grid$d[r]
+    s <- grid$s[r]
+    rho <- grid$rho[r]
+    
+    # generate covariance matrix
+    sig <- katlabutils::generate_cov_ar1(rho, d)
+    
+    # base beta and gamma
+    base.beta <- numeric(d)
+    set.seed(s)
+    base.beta[1:s] <- 2*stats::rbinom(s, 1, 0.5) - 1
+    base.gamma <- base.beta
+    
+    # generate Z data with B rows
+    Z <- katlabutils::fast_generate_mvn(mean = numeric(d), 
+                                        covariance = sig, 
+                                        num_samples = B)
+    # roughly search the nu corresponding to maxType_I
+    nu_search <- 0
+    predictor.X <- Z %*% base.gamma
+    predictor.Y <- Z %*% base.beta 
+    switch(response_type,
+           Gaussian = {
+             base_confoun <- symcrt::simulate_confounding(n, 
+                                                          X = predictor.X + stats::rnorm(B), 
+                                                          Y = predictor.Y + stats::rnorm(B))
+             type_I_search <- 0
+             while (type_I_search-maxType_I < 0) {
+               nu_search <- nu_search + sign(base_confoun)*0.02
+               
+               X <- nu_search*predictor.X + stats::rnorm(B)
+               Y <- nu_search*predictor.Y + stats::rnorm(B)
+               
+               # compute the actual level c and type_I error based on X, Y
+               c_search <- symcrt::simulate_confounding(n, X, Y)
+               type_I_search <- symcrt::pval_shift(alpha = alpha, 
+                                                   c = c_search,
+                                                   type = test_type)
+             }
+           },
+           Binary = {
+             X_base <- stats::rbinom(B, 1, 1/(1+exp(-predictor.X)))
+             Y_base <- stats::rbinom(B, 1, 1/(1+exp(-predictor.Y)))
+             base_confoun <- simulate_confounding(n, 
+                                                  X = X_base, 
+                                                  Y = Y_base)
+             type_I_search <- 0
+             while (type_I_search-maxType_I < 0) {
+               nu_search <- nu_search + sign(base_confoun)*0.02
+               X <- stats::rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_search*predictor.X)))
+               Y <- stats::rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_search*predictor.Y)))
+               
+               # compute the actual level c and type_I error based on X, Y
+               c_search <- symcrt::simulate_confounding(n, X, Y)
+               type_I_search <- symcrt::pval_shift(alpha = alpha, 
+                                                   c = c_search,
+                                                   type = test_type)
+             }
+           },
+           {
+             stop("Invalid specification of response type.")
+           }
+    )
+    
+    # generate a sequence of confounding level
+    nu_max <- nu_search
+    nu_mat[,r] <- seq(0, nu_max, nu_max/(no_nu-1))
+    
+    # store the sign of coefficient
+    grid$coef_pos[r] <- list(which(base.beta > 0))
+    grid$coef_neg[r] <- list(setdiff(1:s, which(base.beta > 0)))
+  }
+  
+  # replicate the grid to accommodate nu
+  grid <- grid[rep(1:no_grid, each = no_nu),] 
+  
+  # fill the last two columns with nu
+  grid$nu <- c(nu_mat)
+  grid$grid_id <- 1:nrow(grid)
+  grid
+}
+
+
+#' A function to compute a sequence of theta
+#'
+#' @param maxPower The maximum power prespecified to detect maximum theta
+#' @param alpha Level of test
+#' @param test_type One-side or Two-side test
+#' @param grid A parameter grid
+#' @param no_theta Number of theta to obtain
+#' @param B Number of MC replications
+#' @param response_type Gaussian or Binary
+#'
+#' @return A new parameter grid
+#' @export
+#' 
+compute_theta_via_power <- function(maxPower, alpha, test_type, grid, no_theta, B, response_type){
+  no_grid <- nrow(grid)
+  theta_mat <- matrix(0, nrow = no_theta, ncol = no_grid)
+  for (r in 1:no_grid) {
+    # extract key variables
+    n <- grid$n[r]
+    d <- grid$d[r]
+    s <- grid$s[r]
+    rho <- grid$rho[r]
+    beta <- numeric(d)
+    beta[grid$coef_neg[[r]]] <- (-1)*grid$nu[r]
+    beta[grid$coef_pos[[r]]] <- grid$nu[r]
+    gamma <- beta
+    
+    # generate covariance matrix
+    sig <- katlabutils::generate_cov_ar1(rho, d)
+    
+    # base theta
+    base.theta <- 1
+    
+    # generate Z data with B rows
+    Z <- katlabutils::fast_generate_mvn(mean = numeric(d), 
+                                        covariance = sig, 
+                                        num_samples = B)
+    # roughly search the nu corresponding to maxType_I
+    theta_search <- 0
+    predictor.X <- Z %*% gamma
+    predictor.Y <- predictor.X*base.theta + Z %*% beta 
+    switch(response_type,
+           Gaussian = {
+             X <- predictor.X + stats::rnorm(B)
+             Y <- X*base.theta + Z %*% beta + stats::rnorm(B)
+             E_X_given_Z <- Z %*% gamma
+             E_Y_given_Z <- E_X_given_Z*base.theta + Z %*% beta
+             base_power <- symcrt::simulate_power(n,
+                                                  X = X, 
+                                                  Y = Y,
+                                                  E_X_given_Z = E_X_given_Z,
+                                                  E_Y_given_Z = E_Y_given_Z)
+             power_search <- 0
+             while (power_search-maxPower < 0) {
+               theta_search <- theta_search + sign(base_power)*0.02
+               
+               # update the conditional expectation of E_Y_given_Z
+               X <- predictor.X + stats::rnorm(B)
+               Y <- X*theta_search + Z %*% beta + stats::rnorm(B)
+               E_Y_given_Z <- E_X_given_Z*theta_search + Z %*% beta
+               
+               # compute the actual level c and type_I error based on X, Y
+               c_search <- symcrt::simulate_power(n,
+                                                  X = X, 
+                                                  Y = Y,
+                                                  E_X_given_Z = E_X_given_Z,
+                                                  E_Y_given_Z = E_Y_given_Z)
+               power_search <- symcrt::pval_shift(alpha = alpha, 
+                                                  c = c_search,
+                                                  type = test_type)
+             }
+           },
+           Binary = {
+             E_X_given_Z <- symcrt::glogit(Z %*% gamma)
+             X <- stats::rbinom(B, 1, E_X_given_Z)
+             E_Y_given_Z <- glogit(base.theta + Z %*% beta)*glogit(Z %*% gamma) + 
+               glogit(Z %*% beta)*(1 - glogit(Z %*% gamma))
+             Y <- stats::rbinom(B, 1, E_Y_given_Z)
+             base_power <- symcrt::simulate_power(n,
+                                                  X = X, 
+                                                  Y = Y,
+                                                  E_X_given_Z = E_X_given_Z,
+                                                  E_Y_given_Z = E_Y_given_Z)
+             power_search <- 0
+             while (power_search-maxPower < 0) {
+               theta_search <- theta_search + sign(base_power)*0.02
+               
+               # update the conditional expectation
+               X <- stats::rbinom(n = B, size = 1, prob = E_X_given_Z)
+               E_Y_given_Z <- glogit(theta_search + Z %*% beta)*glogit(Z %*% beta) + 
+                 glogit(Z %*% beta)*(1 - glogit(Z %*% beta))
+               Y <- stats::rbinom(n = B, size = 1, prob = E_Y_given_Z)
+               
+               # compute the actual level c and type_I error based on X, Y
+               c_search <- symcrt::simulate_power(n,
+                                                  X = X, 
+                                                  Y = Y,
+                                                  E_X_given_Z = E_X_given_Z,
+                                                  E_Y_given_Z = E_Y_given_Z)
+               power_search <- symcrt::pval_shift(alpha = alpha, 
+                                                  c = c_search,
+                                                  type = test_type)
+             }
+           },
+           {
+             stop("Invalid specification of response type.")
+           }
+    )
+    
+    # generate a sequence of confounding level
+    theta_max <- theta_search
+    theta_mat[,r] <- seq(0, theta_max, theta_max/(no_theta-1))
+  }
+  
+  # replicate the grid to accommodate nu
+  grid <- grid[rep(1:no_grid, each = no_theta),] 
+  
+  # fill the last two columns with nu
+  grid$theta <- c(theta_mat)
+  grid$grid_id <- 1:nrow(grid)
+  grid
+}
+
+
+#' Compute the shifted p_value
+#'
+#' @param alpha Level of test
+#' @param c Confounding level
+#' @param type Type of test: one-sided or two-sided
+#'
+#' @return Shifted p_value
+#' @export
+
+pval_shift <- function(alpha, c, type = "two_side"){
+  if(type == "one_side" & c > 0){
+    1 - stats::pnorm(stats::qnorm(1-alpha) - c)
+  }else if(type == "one_side" & c < 0){
+    stats::pnorm(stats::qnorm(alpha) - c)
+  }else if(type == "two_side" & c > 0){
+    1 - stats::pnorm(stats::qnorm(1-alpha/2) - c)
+  }else if (type == "two_side" & c < 0){
+    stats::pnorm(stats::qnorm(alpha/2) - c)
+  }
 }

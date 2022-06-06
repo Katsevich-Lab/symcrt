@@ -94,6 +94,7 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   Y <- data$Y
   Z <- data$Z
   n <- nrow(Z)
+  
 
   # union the unlabel data and label data
   combine_X <- rbind(as.matrix(X), X_unlabel)
@@ -110,7 +111,13 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   }
 
   # fit conditional mean of Y given Z
-  E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg)$conditional_mean
+  if (Y_on_Z_reg$mean_method_type == "oracle") {
+    E_Y_given_Z <- data$E_Y_given_Z_oracle
+    E_Y_given_Z_label <- E_Y_given_Z[1:length(Y)]
+    if (is.null(E_Y_given_Z)) stop("Must specify cond_mean if mean_method_type is oracle")
+  } else {
+    E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg)$conditional_mean
+  }
 
   # define the test statistic
   X_residuals <- X - E_X_given_Z_label

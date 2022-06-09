@@ -526,6 +526,132 @@ compute_theta_via_power <- function(maxPower, alpha, test_type, grid, no_theta, 
 }
 
 
+#' Compute a sequence of theta and nu for a given level of confounding level
+#'
+#' @param maxPower The maximum power prespecified to detect maximum theta
+#' @param alpha Level of test
+#' @param test_type One-side or Two-side test
+#' @param grid A parameter grid
+#' @param no_theta Number of theta to obtain
+#' @param B Number of MC replications
+#' @param response_type Gaussian or Binary
+#'
+#' @return A new parameter grid
+#' @export
+#' 
+compute_theta_via_power_fixed_c <- function(maxPower, alpha, test_type, grid, no_theta, B, response_type){
+  no_grid <- nrow(grid)
+  theta_mat <- matrix(0, nrow = no_theta, ncol = no_grid)
+  nu_mat <- matrix(0, nrow = no_theta, ncol = no_grid)
+  for (r in 1:no_grid) {
+    # extract key variables
+    n <- grid$n[r]
+    d <- grid$d[r]
+    s <- grid$s[r]
+    rho <- grid$rho[r]
+    beta <- numeric(d)
+    beta[grid$coef_neg[[r]]] <- (-1)*grid$nu[r]
+    beta[grid$coef_pos[[r]]] <- grid$nu[r]
+    gamma <- beta
+    
+    # generate covariance matrix
+    sig <- katlabutils::generate_cov_ar1(rho, d)
+    
+    # base theta
+    base.theta <- 0.7
+    
+    # generate Z data with B rows
+    Z <- katlabutils::fast_generate_mvn(mean = numeric(d), 
+                                        covariance = sig, 
+                                        num_samples = B)
+    # roughly search the nu corresponding to maxPower
+    theta_search <- 0
+    switch(response_type,
+           Gaussian = {
+             X <- Z %*% gamma + stats::rnorm(B)
+             # set base.theta = 1 as before
+             beta_star <- beta - base.theta*gamma
+             Y <- X*base.theta + Z %*% beta_star + sqrt(1 - (base.theta)^2)*stats::rnorm(B)
+             E_X_given_Z <- Z %*% gamma
+             E_Y_given_Z <- Z %*% beta
+             base_power <- symcrt::simulate_power(n,
+                                                  X = X, 
+                                                  Y = Y,
+                                                  E_X_given_Z = E_X_given_Z,
+                                                  E_Y_given_Z = E_Y_given_Z)
+             power_search <- 0
+             while (power_search-maxPower < 0) {
+               theta_search <- theta_search + sign(base_power)*0.02
+               
+               # update the conditional expectation of E_Y_given_Z
+               X <- Z %*% gamma + stats::rnorm(B)
+               beta_star <- beta - theta_search*gamma
+               Y <- X*theta_search + Z %*% beta_star + sqrt(1 - (theta_search)^2)*stats::rnorm(B)
+               E_X_given_Z <- Z %*% gamma
+               E_Y_given_Z <- Z %*% beta
+               # compute the actual level c and power based on X, Y
+               c_search <- symcrt::simulate_power(n,
+                                                  X = X, 
+                                                  Y = Y,
+                                                  E_X_given_Z = E_X_given_Z,
+                                                  E_Y_given_Z = E_Y_given_Z)
+               power_search <- symcrt::pval_shift(alpha = alpha, 
+                                                  c = c_search,
+                                                  type = test_type)
+             }
+           },
+           Binary = {
+             E_X_given_Z <- symcrt::glogit(Z %*% gamma)
+             X <- stats::rbinom(B, 1, E_X_given_Z)
+             E_Y_given_Z <- glogit(base.theta + Z %*% beta)*glogit(Z %*% gamma) + 
+               glogit(Z %*% beta)*(1 - glogit(Z %*% gamma))
+             Y <- stats::rbinom(B, 1, glogit(X*base.theta + Z %*% beta ))
+             base_power <- symcrt::simulate_power(n = n,
+                                                  X = X, 
+                                                  Y = Y,
+                                                  E_X_given_Z = E_X_given_Z,
+                                                  E_Y_given_Z = E_Y_given_Z)
+             power_search <- 0
+             while (power_search-maxPower < 0) {
+               theta_search <- theta_search + sign(base_power)*0.01
+               
+               # update the conditional expectation
+               X <- stats::rbinom(n = B, size = 1, prob = E_X_given_Z)
+               E_Y_given_Z <- glogit(theta_search + Z %*% beta)*glogit(Z %*% beta) + 
+                 glogit(Z %*% beta)*(1 - glogit(Z %*% beta))
+               Y <- stats::rbinom(n = B, size = 1, prob = glogit(X*theta_search + Z %*% beta))
+               
+               # compute the actual level c and power based on X, Y
+               c_search <- symcrt::simulate_power(n,
+                                                  X = X, 
+                                                  Y = Y,
+                                                  E_X_given_Z = E_X_given_Z,
+                                                  E_Y_given_Z = E_Y_given_Z)
+               power_search <- symcrt::pval_shift(alpha = alpha, 
+                                                  c = c_search,
+                                                  type = test_type)
+             }
+           },
+           {
+             stop("Invalid specification of response type.")
+           }
+    )
+    
+    # generate a sequence of theta
+    theta_max <- theta_search
+    theta_mat[,r] <- seq(0, theta_max, theta_max/(no_theta-1))
+  }
+  
+  # replicate the grid to accommodate theta
+  grid <- grid[rep(1:no_grid, each = no_theta),] 
+  
+  # fill the last two columns with theta
+  grid$theta <- c(theta_mat)
+  grid$grid_id <- 1:nrow(grid)
+  grid
+}
+
+
 #' Compute the shifted p_value
 #'
 #' @param alpha Level of test

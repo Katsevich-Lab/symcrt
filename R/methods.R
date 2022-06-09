@@ -179,9 +179,10 @@ GCM_debug <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   cond_mean_diff_Y_Z <- cond_mean_Y_Z - E_Y_given_Z # E(Y|Z) - hat{E(Y|Z)}
 
   # compute three bias terms
-  cross_bias <- sqrt(n)*mean(cond_mean_diff_X_Z*cond_mean_diff_Y_Z)
-  X_Z_bias <- sqrt(n)*mean(Y_oracle_residuals*cond_mean_diff_X_Z)
-  Y_Z_bias <- sqrt(n)*mean(X_oracle_residuals*cond_mean_diff_Y_Z)
+  R <- (X-E_X_given_Z)*(Y-E_Y_given_Z)
+  cross_bias <- sqrt(n)*mean(cond_mean_diff_X_Z*cond_mean_diff_Y_Z)/sqrt(mean(R^2) - (mean(R))^2)
+  X_Z_bias <- sqrt(n)*mean(Y_oracle_residuals*cond_mean_diff_X_Z)/sqrt(mean(R^2) - (mean(R))^2)
+  Y_Z_bias <- sqrt(n)*mean(X_oracle_residuals*cond_mean_diff_Y_Z)/sqrt(mean(R^2) - (mean(R))^2)
 
   # output the results
   data.frame(parameter = c("cross_bias", "X_Z_bias", "Y_Z_bias"),

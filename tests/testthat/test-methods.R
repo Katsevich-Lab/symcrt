@@ -113,9 +113,10 @@ test_that("GCM_debug works", {
   fitted_Y_Z <- stats::predict(lasso_fit_Y_Z, newx = Z, s = "lambda.min")
   
   # compute the three bias term
-  cross_bias <- sqrt(n)*mean((cond_mean_X_Z - fitted_X_Z)*(cond_mean_Y_Z - fitted_Y_Z))
-  X_Z_bias <- sqrt(n)*mean((Y - cond_mean_Y_Z)*(cond_mean_X_Z - fitted_X_Z))
-  Y_Z_bias <- sqrt(n)*mean((X - cond_mean_X_Z)*(cond_mean_Y_Z - fitted_Y_Z)) 
+  R <- (X-fitted_X_Z)*(Y-fitted_Y_Z)
+  cross_bias <- sqrt(n)*mean((cond_mean_X_Z - fitted_X_Z)*(cond_mean_Y_Z - fitted_Y_Z))/sqrt(mean(R^2) - (mean(R))^2)
+  X_Z_bias <- sqrt(n)*mean((Y - cond_mean_Y_Z)*(cond_mean_X_Z - fitted_X_Z))/sqrt(mean(R^2) - (mean(R))^2)
+  Y_Z_bias <- sqrt(n)*mean((X - cond_mean_X_Z)*(cond_mean_Y_Z - fitted_Y_Z))/sqrt(mean(R^2) - (mean(R))^2)
   oracle_bias <- matrix(c(cross_bias, X_Z_bias, Y_Z_bias), nrow = 3, ncol = 1)
   
   # test whether we get similar bias

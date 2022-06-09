@@ -571,7 +571,7 @@ compute_theta_via_power_fixed_c <- function(maxPower, alpha, test_type, grid, no
              X <- Z %*% gamma + stats::rnorm(B)
              # set base.theta = 1 as before
              beta_star <- beta - base.theta*gamma
-             Y <- X*base.theta + Z %*% beta_star + sqrt(1 - (base.theta)^2)*stats::rnorm(B)
+             Y <- X*base.theta + Z %*% beta_star + stats::rnorm(B)
              E_X_given_Z <- Z %*% gamma
              E_Y_given_Z <- Z %*% beta
              base_power <- symcrt::simulate_power(n,
@@ -586,7 +586,7 @@ compute_theta_via_power_fixed_c <- function(maxPower, alpha, test_type, grid, no
                # update the conditional expectation of E_Y_given_Z
                X <- Z %*% gamma + stats::rnorm(B)
                beta_star <- beta - theta_search*gamma
-               Y <- X*theta_search + Z %*% beta_star + sqrt(1 - (theta_search)^2)*stats::rnorm(B)
+               Y <- X*theta_search + Z %*% beta_star + stats::rnorm(B)
                E_X_given_Z <- Z %*% gamma
                E_Y_given_Z <- Z %*% beta
                # compute the actual level c and power based on X, Y

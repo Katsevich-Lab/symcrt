@@ -201,6 +201,9 @@ set_default_test_hyperparams <- function(method_type, hyperparams){
            # currently no hyperparams
          },
          dCRT={
+           if(is.null(hyperparams$normalization)){
+             hyperparams$normalization <- "FALSE"
+           }
            if(is.null(hyperparams$resample_family)){
              hyperparams$resample_family <- "gaussian"
            }

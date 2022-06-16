@@ -252,11 +252,17 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   # fit conditional mean of Y given Z with labeled data
   E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg)$conditional_mean
 
-  # define the test statistic with labeled data
+  # define the test statistic with labeled data (with/without normalized GCM sd)
   X_residuals <- c(X - E_X_given_Z_label)
   Y_residuals <- c(Y - E_Y_given_Z)
   S_hat <- sqrt(mean(Var_X_given_Z_label * Y_residuals^2))
-  test_statistic <- 1 / (sqrt(n) * S_hat) * sum(X_residuals * Y_residuals)
+  if(test_hyperparams$normalization == "FALSE"){
+    test_statistic <- 1 / (sqrt(n) * S_hat) * sum(X_residuals * Y_residuals)
+  }else{
+    R <- X_residuals * Y_residuals
+    GCM_sd <- sqrt(mean(R^2) - (mean(R))^2)
+    test_statistic <- 1 / (sqrt(n) * GCM_sd) * sum(X_residuals * Y_residuals)
+  }
 
   # resample matrix from the specified distribution
   resample_matrix <- resample_dCRT(conditional_mean = E_X_given_Z_label,

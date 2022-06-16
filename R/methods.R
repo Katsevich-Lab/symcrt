@@ -424,25 +424,10 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   # learning the resampling distribution with unlabelled data
   switch(test_hyperparams$resample_family,
          binomial = {
-
-           # construct h(Z)=Z%*%gamma_hat and fit conditional mean on label data
-
-           # if(length(which(coef_X_given_Z[-1] != 0)) == 0){
-           #   h_Z_unlabel <- rnorm(length(index_unlabel))
-           #   h_Z_test <- rnorm(length(index_test))
-           # }else{
-           #   h_Z_unlabel <- cbind(1, Z_unlabel)%*%coef_X_given_Z
-           #   h_Z_test <- cbind(1, Z[index_test, ])%*%coef_X_given_Z
-           # }
-           #
-           # g_h_Z_unlabel <- cbind(g_Z_unlabel, h_Z_unlabel)
+           # compute the labeled E(X|Z)
            E_X_given_Z_test <- as.vector(glogit(cbind(1, Z[index_test, ])%*%coef_X_given_Z))
-
-           # fit X on g and set h as offset
-           # residual_on_g_h <- list(mean_method_type = "MLE",
-           #                         mean_method_hyperparams = list(family = "binomial"),
-           #                         var_method_type = "homoskedastic")
-           # fit_X_on_g_h <- fit_conditional_mean(X_unlabel, g_h_Z_unlabel, residual_on_g_h)
+           
+           # calibration
            if(any(g_Z_unlabel == "zero")){
              resample_mean <- E_X_given_Z_test
            }else{
@@ -501,29 +486,21 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
            X_residuals <- X_residuals/(stats::sd(X_residuals))
            Y_residuals <- c(Y[index_test] - E_Y_given_Z_test)
            n_test <- length(X_residuals)
-           imp_obe <- abs(mean(X_residuals * Y_residuals))
+           imp_obe <- mean(X_residuals * Y_residuals)
            emp_var <- mean(Y_residuals^2)
-           p_value <- 2 * stats::pnorm(- sqrt(n_test) * imp_obe / sqrt(emp_var))
+           test_statistic <- sqrt(n_test) * imp_obe / sqrt(emp_var)
+           p_value <- 2 * stats::pnorm(- abs(test_statistic))
 
-           # # resample matrix from the specified distribution
-           # resample_mean <- cbind(1, g_Z_test)%*%(fit_residual_g_Z$coef_vec)
-           # resample_var <- Var_residual_g_Z
-           # resample_matrix <- resample_dCRT(conditional_mean = resample_mean,
-           #                                  conditional_variance = resample_var,
-           #                                  no_resample = test_hyperparams$no_resample,
-           #                                  resample_dist = test_hyperparams$resample_family)
-           # resample_X_residuals <- resample_matrix
          },
          {
            stop("The rsampling distribution of X given Z is invalid!")
          }
   )
-
-
+  
   # output the results
   data.frame(
-    parameter = c("p_value"),
+    parameter = c("test_statistic", "p_value"),
     target = "conditional_independence",
-    value = c(p_value)
+    value = c(test_statistic, p_value)
   )
 }

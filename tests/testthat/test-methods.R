@@ -190,6 +190,7 @@ test_that("MaxwayCRT works for Gaussian", {
     test_hyperparams = test_hyperparams
   )
   p_value_MaxwayCRT <- MaxwayCRT_result |>
+    dplyr::filter(parameter == "p_value") |>
     dplyr::select(value) |>
     unname() |>
     as.numeric()
@@ -282,6 +283,7 @@ test_that("MaxwayCRT works for Gaussian", {
     test_hyperparams = test_hyperparams
   )
   p_value_MaxwayCRT <- MaxwayCRT_result |>
+    dplyr::filter(parameter == "p_value") |>
     dplyr::select(value) |>
     unname() |>
     as.numeric()

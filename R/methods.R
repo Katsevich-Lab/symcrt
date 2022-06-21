@@ -251,18 +251,10 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
 
   # fit conditional mean of Y given Z with labeled data
   E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg)$conditional_mean
-
-  # define the test statistic with labeled data (with/without normalized GCM sd)
+  
+  # compute residuals
   X_residuals <- c(X - E_X_given_Z_label)
   Y_residuals <- c(Y - E_Y_given_Z)
-  S_hat <- sqrt(mean(Var_X_given_Z_label * Y_residuals^2))
-  if(test_hyperparams$normalization == "FALSE"){
-    test_statistic <- 1 / (sqrt(n) * S_hat) * sum(X_residuals * Y_residuals)
-  }else{
-    R <- X_residuals * Y_residuals
-    GCM_sd <- sqrt(mean(R^2) - (mean(R))^2)
-    test_statistic <- 1 / (sqrt(n) * GCM_sd) * sum(X_residuals * Y_residuals)
-  }
 
   # resample matrix from the specified distribution
   resample_matrix <- resample_dCRT(conditional_mean = E_X_given_Z_label,
@@ -273,6 +265,17 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   # compute the residuals and variance vector for each resample
   resample_X_residuals <- resample_matrix - E_X_given_Z_label
   residual_star <- apply(resample_X_residuals * Y_residuals, 2, sum)
+  
+  # define the test statistic with labeled data (with/without normalized GCM sd)
+  if(test_hyperparams$normalization == "FALSE"){
+    S_hat <- 1
+    test_statistic <- 1 / (sqrt(n) * S_hat) * sum(X_residuals * Y_residuals)
+  }else{
+    R <- X_residuals * Y_residuals
+    GCM_sd <- sqrt(mean(R^2) - (mean(R))^2)
+    test_statistic <- 1 / (sqrt(n) * GCM_sd) * sum(X_residuals * Y_residuals)
+    S_hat <- sqrt(apply((resample_X_residuals * Y_residuals)^2 / n, 2, sum))
+  }
 
   # compute the resample test statistic and quantile
   resample_test_statistic <- 1 / (sqrt(n) * S_hat) * residual_star

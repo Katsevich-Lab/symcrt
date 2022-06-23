@@ -5,29 +5,29 @@
 \title{Compute the sequence of nu according to presepcfied level of type_I error}
 \usage{
 compute_nu_via_Type_I(
+  grid,
   maxType_I,
   alpha,
   test_type,
-  grid,
   no_nu,
   B,
   response_type
 )
 }
 \arguments{
+\item{grid}{The original parameter grid without nu}
+
 \item{maxType_I}{A maximum value of type_I error we want to reach}
 
 \item{alpha}{Level of test}
 
 \item{test_type}{One side or Two side}
 
-\item{grid}{The original parameter grid without nu}
-
 \item{no_nu}{Number of nu we want}
 
 \item{B}{Monte Carlo times}
 
-\item{response_type}{Gaussian or Binary}
+\item{response_type}{gaussian or binomial}
 }
 \value{
 A new parameter grid with extra column of nu

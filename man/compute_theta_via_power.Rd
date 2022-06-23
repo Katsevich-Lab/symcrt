@@ -5,29 +5,29 @@
 \title{A function to compute a sequence of theta}
 \usage{
 compute_theta_via_power(
+  grid,
   maxPower,
   alpha,
   test_type,
-  grid,
   no_theta,
   B,
   response_type
 )
 }
 \arguments{
+\item{grid}{A parameter grid}
+
 \item{maxPower}{The maximum power prespecified to detect maximum theta}
 
 \item{alpha}{Level of test}
 
 \item{test_type}{One-side or Two-side test}
 
-\item{grid}{A parameter grid}
-
 \item{no_theta}{Number of theta to obtain}
 
 \item{B}{Number of MC replications}
 
-\item{response_type}{Gaussian or Binary}
+\item{response_type}{gaussian or binomial}
 }
 \value{
 A new parameter grid

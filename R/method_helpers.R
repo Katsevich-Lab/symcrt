@@ -27,7 +27,7 @@ fit_conditional_mean <- function(response, features, method) {
                                              s = hyperparams$s)),
            coef_vec = as.vector(stats::coef(lasso_fit, s = hyperparams$s))
            )
-      
+
     },
     PLASSO = {
       lasso_fit <- fit_lasso(response, features, hyperparams)
@@ -72,7 +72,7 @@ fit_lasso <- function(response, features, hyperparams){
                       y = response,
                       nfolds = hyperparams$nfolds,
                       alpha = hyperparams$alpha,
-                      family = hyperparams$family) 
+                      family = hyperparams$family)
   }
 }
 
@@ -152,7 +152,7 @@ set_default_method_hyperparams <- function(method_type, hyperparams){
          },
          LASSO={
            if (is.null(hyperparams$s)) {
-             hyperparams$s <- "lambda.1se"
+             hyperparams$s <- "lambda.min"
            }
            if (is.null(hyperparams$nfolds)) {
              hyperparams$nfolds <- 10
@@ -166,7 +166,7 @@ set_default_method_hyperparams <- function(method_type, hyperparams){
          },
          PLASSO={
            if (is.null(hyperparams$s)) {
-             hyperparams$s <- "lambda.1se"
+             hyperparams$s <- "lambda.min"
            }
            if (is.null(hyperparams$nfolds)) {
              hyperparams$nfolds <- 10
@@ -193,47 +193,43 @@ set_default_method_hyperparams <- function(method_type, hyperparams){
 #' @return The same named list that was input, with default values added if necessary
 #' @export
 set_default_test_hyperparams <- function(method_type, hyperparams){
-  switch(method_type,
-         GCM={
-           if(is.null(hyperparams$way_to_learn)){
-             hyperparams$way_to_learn <- "supervised"
-           }
-         },
-         GCM_debug={
-           # currently no hyperparams
-         },
-         dCRT={
-           if(is.null(hyperparams$normalization)){
-             hyperparams$normalization <- "FALSE"
-           }
-           if(is.null(hyperparams$resample_family)){
-             hyperparams$resample_family <- "gaussian"
-           }
-           if(is.null(hyperparams$no_resample)){
-             hyperparams$no_resample <- 2000
-           }
-           if(is.null(hyperparams$way_to_learn)){
-             hyperparams$way_to_learn <- "supervised"
-           }
-           if(is.null(hyperparams$unlabel_prop)){
-             hyperparams$unlabel_prop <- 0
-           }
-           if(is.null(hyperparams$holdout_prop)){
-             hyperparams$holdout_prop <- 0
-           }
-           if(is.null(hyperparams$g_Z_support)){
-             hyperparams$g_Z_support <- "default"
-           }
-           if(hyperparams$holdout_prop + hyperparams$unlabel_prop >= 1){
-             stop("The number of unlablled and holdout data exceeds the total number of data!")
-           }
-         },
-         MX2_F_test = {
-           if(is.null(hyperparams$way_to_learn)){
-             hyperparams$way_to_learn <- "supervised"
-           }
-         }
-  )
+  if(is.null(hyperparams$way_to_learn)){
+    hyperparams$way_to_learn <- "supervised"
+  }
+
+  if(method_type %in% c("dCRT", "MaxwayCRT")){
+    if(is.null(hyperparams$resample_family)){
+      hyperparams$resample_family <- "gaussian"
+    }
+    if(is.null(hyperparams$no_resample)){
+      hyperparams$no_resample <- 5000
+    }
+    if(is.null(hyperparams$var_method_type)){
+      hyperparams$var_method_type <- "homoscedastic"
+    }
+  }
+
+  if(method_type == "MaxwayCRT"){
+    if(is.null(hyperparams$unlabel_prop)){
+      hyperparams$unlabel_prop <- 0
+    }
+    if(is.null(hyperparams$holdout_prop)){
+      hyperparams$holdout_prop <- 0
+    }
+    if(is.null(hyperparams$g_Z_support)){
+      hyperparams$g_Z_support <- "default"
+    }
+    if(hyperparams$holdout_prop + hyperparams$unlabel_prop >= 1){
+      stop("The number of unlablled and holdout data exceeds the total number of data!")
+    }
+  }
+
+  if(method_type == "dCRT"){
+    if(is.null(hyperparams$normalization)){
+      hyperparams$normalization <- "FALSE"
+    }
+  }
+
   hyperparams
 }
 

@@ -36,7 +36,7 @@ fit_conditional_mean <- function(response, features, method) {
       if (length(act_set) == 0) {
         glm_fit <- stats::glm(response ~ 1, family = hyperparams$family)
       } else {
-        glm_fit <- stats::glm(response ~ features[, act_set], family = hyperparams$family)
+        suppressWarnings(glm_fit <- stats::glm(response ~ features[, act_set], family = hyperparams$family))
       }
       coefs[act_set] <- as.vector(glm_fit$coefficients)[-1]
       coefs[1] <-  as.vector(glm_fit$coefficients)[1]
@@ -205,7 +205,7 @@ set_default_test_hyperparams <- function(method_type, hyperparams){
       hyperparams$no_resample <- 5000
     }
     if(is.null(hyperparams$var_method_type)){
-      hyperparams$var_method_type <- "homoscedastic"
+      hyperparams$var_method_type <- "homoskedastic"
     }
   }
 
@@ -310,7 +310,7 @@ MSE_shared <- function(data, coef_hat, type, cond_distr){
          }
   )
   # compute the prediction
-  pred_shared_vec <- Z[,1:s]%*%coef_hat[1:s] + 
+  pred_shared_vec <- Z[,1:s]%*%coef_hat[1:s] +
     Z2_given_Z1%*%coef_hat[(s+1):d]
   # return values
   sum((oracle_shared - pred_shared_vec)^2)/n

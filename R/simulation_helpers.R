@@ -31,7 +31,7 @@ generate_method_list_from_strings <- function(method_strings, distribution, way_
     test_type <- method_string_split[1]
 
     # add regression methods
-    if(test_type %in% c("GCM", "dCRT")){
+    if(test_type %in% c("GCM", "dCRT", "MaxwayCRT")){
       X_on_Z_method_type <- method_string_split[2]
       X_on_Z_reg <- list(mean_method_type = X_on_Z_method_type,
                          mean_method_hyperparams = list(family = distribution))

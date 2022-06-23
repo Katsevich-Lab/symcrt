@@ -34,11 +34,11 @@ MX2_F_test <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   }
 
   # fit conditional variance of X given Z
-  if (X_on_Z_reg$var_method_type == "oracle") {
+  if (test_hyperparams$var_method_type == "oracle") {
     Var_X_given_Z <- data$Var_X_given_Z_oracle
     if (is.null(Var_X_given_Z)) stop("Must specify cond_var if var_method_type is oracle")
   } else {
-    Var_X_given_Z <- fit_conditional_variance(X, Z, E_X_given_Z, X_on_Z_reg$var_method_type)
+    Var_X_given_Z <- fit_conditional_variance(X, Z, E_X_given_Z, test_hyperparams$var_method_type)
   }
 
   # fit conditional mean of Y given Z
@@ -94,12 +94,12 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   Y <- data$Y
   Z <- data$Z
   n <- nrow(Z)
-  
+
 
   # union the unlabel data and label data
   combine_X <- rbind(as.matrix(X), X_unlabel)
   combine_Z <- rbind(as.matrix(Z), Z_unlabel)
-  
+
   # fit conditional mean of X given Z
   if (X_on_Z_reg$mean_method_type == "oracle") {
     E_X_given_Z <- data$E_X_given_Z_oracle
@@ -240,18 +240,18 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   }
 
   # fit conditional variance of X given Z
-  if (X_on_Z_reg$var_method_type == "oracle") {
+  if (test_hyperparams$var_method_type == "oracle") {
     Var_X_given_Z <- data$Var_X_given_Z_oracle
     Var_X_given_Z_label <- Var_X_given_Z[1:length(X)]
     if (is.null(Var_X_given_Z)) stop("Must specify cond_var if var_method_type is oracle")
   } else {
-    Var_X_given_Z <- fit_conditional_variance(combine_X, combine_Z, E_X_given_Z, X_on_Z_reg$var_method_type)
+    Var_X_given_Z <- fit_conditional_variance(combine_X, combine_Z, E_X_given_Z, test_hyperparams$var_method_type)
     Var_X_given_Z_label <- Var_X_given_Z[1:length(X)]
   }
 
   # fit conditional mean of Y given Z with labeled data
   E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg)$conditional_mean
-  
+
   # compute residuals
   X_residuals <- c(X - E_X_given_Z_label)
   Y_residuals <- c(Y - E_Y_given_Z)
@@ -265,9 +265,9 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   # compute the residuals and variance vector for each resample
   resample_X_residuals <- resample_matrix - E_X_given_Z_label
   residual_star <- apply(resample_X_residuals * Y_residuals, 2, sum)
-  
+
   # define the test statistic with labeled data (with/without normalized GCM sd)
-  if(test_hyperparams$normalization == "FALSE"){
+  if(!test_hyperparams$normalize){
     S_hat <- 1
     test_statistic <- 1 / (sqrt(n) * S_hat) * sum(X_residuals * Y_residuals)
   }else{
@@ -429,7 +429,7 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
          binomial = {
            # compute the labeled E(X|Z)
            E_X_given_Z_test <- as.vector(glogit(cbind(1, Z[index_test, ])%*%coef_X_given_Z))
-           
+
            # calibration
            if(any(g_Z_unlabel == "zero")){
              resample_mean <- E_X_given_Z_test
@@ -480,7 +480,7 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
              Var_residual_g_Z <- fit_conditional_variance(r_unlabel,
                                                           g_Z_unlabel,
                                                           fit_residual_g_Z$conditional_mean,
-                                                          X_on_Z_reg$var_method_type)
+                                                          test_hyperparams$var_method_type)
              coef_residual_on_g <- fit_residual_g_Z$coef_vec
              X_residuals <- r_label - cbind(1, g_Z_test)%*%coef_residual_on_g
            }
@@ -499,7 +499,7 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
            stop("The rsampling distribution of X given Z is invalid!")
          }
   )
-  
+
   # output the results
   data.frame(
     parameter = c("test_statistic", "p_value"),

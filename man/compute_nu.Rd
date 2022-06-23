@@ -16,7 +16,7 @@ compute_nu(grid, c, B, no_nu_grid, response_type)
 \item{no_nu_grid}{The number of grid that spread from 0 to the maximum confounding
 level which is searched by the algorithm}
 
-\item{response_type}{Type of response, Gaussian or Binary}
+\item{response_type}{Type of response, gaussian or binomial}
 }
 \value{
 A data frame containing extra two parameters: confounding level and magnitude.

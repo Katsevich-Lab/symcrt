@@ -12,7 +12,7 @@ magnitude_detect(
   beta,
   gamma,
   eps = 1e-04,
-  type = "Gaussian"
+  type = "gaussian"
 )
 }
 \arguments{
@@ -30,7 +30,7 @@ magnitude_detect(
 
 \item{eps}{The precision number}
 
-\item{type}{The type of response (either Gaussian or Binary)}
+\item{type}{The type of response (either gaussian or binomial)}
 }
 \value{
 The magnitude of coefficient reaches the confounding level

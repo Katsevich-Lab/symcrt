@@ -290,7 +290,7 @@ MSE_shared <- function(data, coef_hat, type, cond_distr){
   gamma <- data$gamma
   beta <- data$beta
   Z <- data$Z
-  s <- data$s
+  s <- length(which(beta != 0))
   n <- nrow(Z)
   d <- ncol(Z)
   Z2_given_Z1 <- data$Z2_given_Z1

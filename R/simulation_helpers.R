@@ -777,7 +777,7 @@ generate_data <- function(n, N, d, rho, B, coef_neg, coef_pos, nu, theta, distri
                                       covariance = sig,
                                       num_samples = B * n)
 
-  # generate Z_unlabel with B*n rows
+  # generate Z_unlabel with B*N rows
   Z_unlabel <- katlabutils::fast_generate_mvn(mean = numeric(d),
                                               covariance = sig,
                                               num_samples = B * N)

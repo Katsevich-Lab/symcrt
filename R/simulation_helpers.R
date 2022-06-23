@@ -672,3 +672,19 @@ pval_shift <- function(alpha, c, type = "two_side"){
     stats::pnorm(stats::qnorm(alpha/2) - c)
   }
 }
+
+
+#' A function for computing the conditional mean in multivariate normal distribution
+#'
+#' @param Sigma The covariance matrix
+#' @param cond.ind The conditional index; should lie in 1:nrow(Sigma)
+#' @param X.given A matrix which specify the conditioned value (dim: n * length(cond.ind))
+#'
+#' @return A matrix of dim (nrow(Sigma) - length(cond.ind))*n
+#' @export
+
+compute_cond_mean <- function(Sigma, cond.ind, X.given){
+  cond.else <- setdiff(1:nrow(Sigma), cond.ind)
+  sig.cov <- Sigma[cond.else,cond.ind] %*% solve(Sigma[cond.ind, cond.ind])
+  sig.cov %*% t(X.given)
+}

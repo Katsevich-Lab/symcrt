@@ -2,8 +2,11 @@
 
 export(GCM)
 export(GCM_debug)
+export(MSE_shared)
+export(MSE_total)
 export(MX2_F_test)
 export(MaxwayCRT)
+export(compute_cond_mean)
 export(compute_nu)
 export(compute_nu_via_Type_I)
 export(compute_theta_via_power)

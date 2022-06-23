@@ -38,8 +38,10 @@ fit_conditional_mean <- function(response, features, method) {
       } else {
         glm_fit <- stats::glm(response ~ features[, act_set], family = hyperparams$family)
       }
+      coefs[act_set] <- as.vector(glm_fit$coefficients)[-1]
+      coefs[1] <-  as.vector(glm_fit$coefficients)[1]
       list(conditional_mean = glm_fit$fitted.values,
-           coef_vec = as.vector(glm_fit$coefficients))
+           coef_vec = coefs)
     },
     naive = {
       # provide unconditional expectation
@@ -270,5 +272,66 @@ logit <- function(x){
 
 glogit <- function(x){
   return(1 / (1 + exp(-x)))
+}
+
+
+#' This is a function for computing MSE on shared variables
+#'
+#' @param data A list containing oracle coefficient, data, number of nonzero component etc.
+#' @param coef_hat A vector containing the estimated coefficient
+#' @param type Either under null or alternative
+#' @param cond_distr Conditional distribution including X|Z and Y|Z
+#'
+#' @return A positive number indicating the MSE on shared variables
+#' @export
+
+MSE_shared <- function(data, coef_hat, type, cond_distr){
+  # extract true coefficient, number of shared variables, covariate and conditional mean
+  gamma <- data$gamma
+  beta <- data$beta
+  Z <- data$Z
+  s <- data$s
+  n <- nrow(Z)
+  d <- ncol(Z)
+  Z2_given_Z1 <- data$Z2_given_Z1
+  switch(type,
+         null = {
+           if(cond_distr == "X_on_Z"){
+             # extract oracle conditional expectation on shared variables
+             oracle_shared <- Z[,1:s]%*%gamma[1:s]
+           }else{
+             oracle_shared <- Z[,1:s]%*%beta[1:s]
+           }
+         },
+         power = {
+           # extract extra parameter theta
+           theta <- data$theta
+           # extract oracle conditional expectation on shared variables
+           oracle_shared <- Z[,1:s]%*%(beta[1:s]+gamma[1:s]*theta)
+         },
+         {
+           stop("Invalid specification of type of simulation")
+         }
+  )
+  # compute the prediction
+  pred_shared_vec <- Z[,1:s]%*%coef_hat[1:s] + 
+    Z2_given_Z1%*%coef_hat[(s+1):d]
+  # return values
+  sum((oracle_shared - pred_shared_vec)^2)/n
+}
+
+#' This is a function for computing MSE on total variables
+#'
+#' @param oracle_pred The oracle conditional expectation
+#' @param covariate Z matrix
+#' @param coef_hat A vector containing the estimated coefficient
+#'
+#' @return A positive number indicating the MSE on total variables
+#' @export
+#'
+MSE_total <- function(oracle_pred, covariate, coef_hat){
+  pred_vec <- as.vector(covariate%*%coef_hat)
+  oracle_pred <- as.vector(oracle_pred)
+  sum((oracle_pred - pred_vec)^2)/length(oracle_pred)
 }
 

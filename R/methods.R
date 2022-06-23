@@ -94,6 +94,7 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   Y <- data$Y
   Z <- data$Z
   n <- nrow(Z)
+  d <- ncol(Z)
   
 
   # union the unlabel data and label data
@@ -106,7 +107,8 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
     E_X_given_Z_label <- E_X_given_Z[1:length(X)]
     if (is.null(E_X_given_Z)) stop("Must specify cond_mean if mean_method_type is oracle")
   } else {
-    E_X_given_Z <- fit_conditional_mean(combine_X, combine_Z, X_on_Z_reg)$conditional_mean
+    fit_X_given_Z <- fit_conditional_mean(combine_X, combine_Z, X_on_Z_reg)
+    E_X_given_Z <- fit_X_given_Z$conditional_mean
     E_X_given_Z_label <- E_X_given_Z[1:length(X)]
   }
 
@@ -116,7 +118,8 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
     E_Y_given_Z_label <- E_Y_given_Z[1:length(Y)]
     if (is.null(E_Y_given_Z)) stop("Must specify cond_mean if mean_method_type is oracle")
   } else {
-    E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg)$conditional_mean
+    fit_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg)
+    E_Y_given_Z <- fit_Y_given_Z$conditional_mean
   }
 
   # define the test statistic
@@ -127,13 +130,48 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
 
   # define the p-value (for now, define as two-sided)
   p_value <- 2 * stats::pnorm(abs(test_statistic), lower.tail = FALSE)
+  
+  # compute MSE only for Gaussian
+  if(is.null(test_hyperparams$MSE) == FALSE){
+    if(is.null(data$beta)){
+      stop("Must specify the orcale beta coefficient when computing MSE")
+    }
+    if(is.null(data$gamma)){
+      stop("Must specify the orcale gamma coefficient when computing MSE")
+    }
+    # extract the fitted coefficient
+    gamma_hat <- as.vector(fit_X_given_Z$coef_vec)[-1]
+    beta_hat <- as.vector(fit_Y_given_Z$coef_vec)[-1]
+    # extract oracle conditional expectation
+    oracle_X_given_Z <- data$E_X_given_Z_oracle
+    oracle_Y_given_Z <- data$E_Y_given_Z_oracle
+    # compute MSE on shared/total variables
+    MSE_shared_X_on_Z <- MSE_shared(data = data, coef_hat = gamma_hat, type = "null", cond_distr = "X_on_Z")
+    MSE_total_X_on_Z <- MSE_total(oracle_pred = oracle_X_given_Z, covariate = data$Z, coef_hat = gamma_hat)
+    MSE_shared_Y_on_Z <- MSE_shared(data = data, coef_hat = beta_hat, type = data$type, cond_distr = "Y_on_Z")
+    MSE_total_Y_on_Z <- MSE_total(oracle_pred = oracle_Y_given_Z, covariate = data$Z, coef_hat = beta_hat)
+  }
 
   # output the results
-  data.frame(
-    parameter = c("test_statistic", "p_value"),
-    target = "conditional_independence",
-    value = c(test_statistic, p_value)
-  )
+  if(is.null(test_hyperparams$MSE)){
+    return(
+      data.frame(
+        parameter = c("test_statistic", "p_value"),
+        target = "conditional_independence",
+        value = c(test_statistic, p_value))
+    )
+  }else{
+    return(  
+      data.frame(
+        parameter = c("test_statistic", "p_value", 
+                      "MSE_shared_X_Z", "MSE_total_X_Z", 
+                      "MSE_shared_Y_Z", "MSE_total_Y_Z"),
+        target = "conditional_independence",
+        value = c(test_statistic, p_value,
+                  MSE_shared_X_on_Z, MSE_total_X_on_Z,
+                  MSE_shared_Y_on_Z, MSE_total_Y_on_Z))
+    )
+  }
 }
 
 

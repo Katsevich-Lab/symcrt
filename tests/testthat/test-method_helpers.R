@@ -96,8 +96,8 @@ test_that("fit_conditional_mean works for PLASSO", {
   
   # run the oracle post PMLE
   glm_fit <- glmnet::cv.glmnet(x = features, y = response, family = family)
-  coef_glm <- stats::coef(glm_fit, s = "lambda.min")
-  act_set <- which(coef_glm[-1, 1] != 0) |> unname()
+  coef_glm <- as.vector(stats::coef(glm_fit, s = "lambda.min"))
+  act_set <- which(coef_glm[-1] != 0) |> unname()
   if (length(act_set) == 0) {
     feature_intercept <- rep(coef_glm[1, 1], n)
     p_glm <- stats::glm(response ~ feature_intercept, family = family)
@@ -105,15 +105,23 @@ test_that("fit_conditional_mean works for PLASSO", {
     p_glm <- stats::glm(response ~ features[, act_set], family = family)
   }
   true_fitted <- p_glm$fitted.values |> unname()
+  coef_glm[act_set] <- as.vector(p_glm$coefficients)[-1]
+  coef_glm[1] <- as.vector(p_glm$coefficients)[1]
   
   # try symcrt function
-  conditional_mean <- fit_conditional_mean(
+  result <- fit_conditional_mean(
     response = response,
     features = features,
     method = method
-  )$conditional_mean
+  )
+  conditional_mean <- result$conditional_mean
+  coeffi <- as.vector(result$coef_vec)
   expect_lt(
     mean(abs(true_fitted - conditional_mean)^2),
+    0.05
+  )
+  expect_lt(
+    sum(abs(coeffi - coef_glm)^2),
     0.05
   )
 })

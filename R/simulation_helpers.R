@@ -753,7 +753,6 @@ pval_shift <- function(alpha, c, type = "two_side"){
   }
 }
 
-
 #' Generic function to generate data for the numerical simulations
 #'
 #' @param n Sample size
@@ -844,4 +843,19 @@ generate_data <- function(n, N, d, rho, B, coef_neg, coef_pos, nu, theta, distri
 
   # return the list of datasets
   return(data_list)
+}
+
+#' A function for computing the conditional mean in multivariate normal distribution
+#'
+#' @param Sigma The covariance matrix
+#' @param cond.ind The conditional index; should lie in 1:nrow(Sigma)
+#' @param X.given A matrix which specify the conditioned value (dim: n * length(cond.ind))
+#'
+#' @return A matrix of dim (nrow(Sigma) - length(cond.ind))*n
+#' @export
+
+compute_cond_mean <- function(Sigma, cond.ind, X.given){
+  cond.else <- setdiff(1:nrow(Sigma), cond.ind)
+  sig.cov <- Sigma[cond.else,cond.ind] %*% solve(Sigma[cond.ind, cond.ind])
+  sig.cov %*% t(X.given)
 }

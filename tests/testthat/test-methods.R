@@ -310,4 +310,92 @@ test_that("MaxwayCRT works for Gaussian", {
   )
 })
 
+test_that("GCM MSE computation works", {
+  set.seed(1)
+  # test whether a specific example gives exactly the right answer
+  # (generated using dput)
+  n <- 2000
+  d <- 200
+  s <- 5
+  no_act <- s
+  gamma <- rep(0, d)
+  beta <- rep(0, d)
+  gamma[1:no_act] <- 2*rbinom(no_act, 1, 0.5) - 1
+  beta[1:no_act] <- 2*rbinom(no_act, 1, 0.5) - 1
+  sig <- katlabutils::generate_cov_ar1(0.5, d)
+  Z <- katlabutils::fast_generate_mvn(rep(0, d), sig, n)
+  noise <- rnorm(2*n)
+  cond_mean_X_Z <- Z %*% gamma |> as.vector()
+  cond_mean_Y_Z <- Z %*% beta |> as.vector()
+  X <- cond_mean_X_Z + noise[1:n]
+  Y <- cond_mean_Y_Z + noise[(n+1):(2*n)]
+  # compute the conditional mean of Z_1|Z_2
+  cond.ind <- seq(1:length(which(beta != 0)))
+  Z.given <- Z[, cond.ind]
+  Z2_given_Z1 <- symcrt::compute_cond_mean(Sigma = sig, 
+                                           cond.ind = cond.ind, 
+                                           X.given = Z.given)
+  data <- list(Z = Z, 
+               X = X, 
+               Y = Y,
+               E_X_given_Z_oracle = cond_mean_X_Z,
+               E_Y_given_Z_oracle = cond_mean_Y_Z,
+               Z2_given_Z1 = t(Z2_given_Z1),
+               s = s,
+               type = "null",
+               beta = beta,
+               gamma = gamma
+               )
+  
+  X_on_Z_reg <- list(
+    mean_method_type = "LASSO",
+    mean_method_hyperparams = list(
+      family = "gaussian",
+      s = "lambda.min",
+      nfols = 10,
+      alpha = 1
+    )
+  )
+  
+  Y_on_Z_reg <- list(
+    mean_method_type = "LASSO",
+    mean_method_hyperparams = list(
+      family = "gaussian",
+      s = "lambda.min",
+      nfols = 10,
+      alpha = 1
+    )
+  )
+  
+  # obtain the oracle fitted mean
+  set.seed(1)
+  lasso_fit_X_Z <- glmnet::cv.glmnet(x = Z, y = X)
+  lasso_fit_Y_Z <- glmnet::cv.glmnet(x = Z, y = Y)
+  fitted_X_Z <- stats::predict(lasso_fit_X_Z, newx = Z, s = "lambda.min")
+  fitted_Y_Z <- stats::predict(lasso_fit_Y_Z, newx = Z, s = "lambda.min")
+  
+  # compute the MSE on shared variables
+  gamma_hat <- as.vector(coef(lasso_fit_X_Z, s = "lambda.min")[-1])
+  pred_shared_mat_X_on_Z <- Z[,1:s]%*%gamma_hat[1:s] + t(Z2_given_Z1)%*%gamma_hat[(s+1):d]
+  oracle_shared_X_on_Z <- Z[,1:s]%*%gamma[1:s] + t(Z2_given_Z1)%*%gamma[(s+1):d]
+  MSE_shared_X_on_Z <- sum((oracle_shared_X_on_Z - pred_shared_mat_X_on_Z)^2)/n
+  
+  
+  # test whether we get similar bias
+  # run GCM_debug
+  set.seed(1)
+  GCM_result <- GCM(data = data,
+                    X_on_Z_reg = X_on_Z_reg,
+                    Y_on_Z_reg = Y_on_Z_reg,
+                    test_hyperparams = list(MSE = "TRUE")
+                    )
+  MSE_GCM_shared <- GCM_result |> 
+    dplyr::select(value) |> 
+    as.vector()
+  
+  expect_lt(abs(MSE_GCM_shared[3,] - MSE_shared_X_on_Z),
+            0.2)
+})
+
+
 

@@ -311,7 +311,8 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
     R <- X_residuals * Y_residuals
     GCM_sd <- sqrt(mean(R^2) - (mean(R))^2)
     test_statistic <- 1 / (sqrt(n) * GCM_sd) * sum(X_residuals * Y_residuals)
-    S_hat <- sqrt(apply((resample_X_residuals * Y_residuals)^2 / n, 2, sum))
+    R_hat <- resample_X_residuals * Y_residuals
+    S_hat <- sqrt(apply(R_hat^2, 2, mean) - apply(R_hat, 2, mean)^2)
   }
 
   # compute the resample test statistic and quantile

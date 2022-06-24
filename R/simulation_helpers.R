@@ -31,7 +31,7 @@ generate_method_list_from_strings <- function(method_strings, distribution, way_
     test_type <- method_string_split[1]
 
     # add regression methods
-    if(test_type %in% c("GCM", "dCRT")){
+    if(test_type %in% c("GCM", "dCRT", "MaxwayCRT")){
       X_on_Z_method_type <- method_string_split[2]
       X_on_Z_reg <- list(mean_method_type = X_on_Z_method_type,
                          mean_method_hyperparams = list(family = distribution))
@@ -777,7 +777,7 @@ generate_data <- function(n, N, d, rho, B, coef_neg, coef_pos, nu, theta, distri
                                       covariance = sig,
                                       num_samples = B * n)
 
-  # generate Z_unlabel with B*n rows
+  # generate Z_unlabel with B*N rows
   Z_unlabel <- katlabutils::fast_generate_mvn(mean = numeric(d),
                                               covariance = sig,
                                               num_samples = B * N)

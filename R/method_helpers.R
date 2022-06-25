@@ -225,8 +225,8 @@ set_default_test_hyperparams <- function(method_type, hyperparams){
   }
 
   if(method_type == "dCRT"){
-    if(is.null(hyperparams$normalization)){
-      hyperparams$normalization <- "FALSE"
+    if(is.null(hyperparams$normalize)){
+      hyperparams$normalize <- FALSE
     }
   }
 
@@ -266,7 +266,7 @@ logit <- function(x){
 #' @return Expit output
 #' @export
 
-glogit <- function(x){
+expit <- function(x){
   return(1 / (1 + exp(-x)))
 }
 
@@ -286,10 +286,13 @@ MSE_shared <- function(data, coef_hat, type, cond_distr){
   gamma <- data$gamma
   beta <- data$beta
   Z <- data$Z
-  s <- length(which(beta != 0))
+  s <- data$s
   n <- nrow(Z)
   d <- ncol(Z)
   Z2_given_Z1 <- data$Z2_given_Z1
+  if(type != "null"){
+    type <- "power"
+  }
   switch(type,
          null = {
            if(cond_distr == "X_on_Z"){

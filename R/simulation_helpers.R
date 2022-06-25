@@ -14,6 +14,7 @@
 #' @return A list of simulatr functions whose length is same as that of \code{method_strings}.
 #' @export
 generate_method_list_from_strings <- function(method_strings, distribution, way_to_learn) {
+  set.seed(1)
   num_methods <- length(method_strings)
 
   # prepare lists for the four columns of the methods_df
@@ -59,6 +60,19 @@ generate_method_list_from_strings <- function(method_strings, distribution, way_
         stop("normalization variable should either be normalized or unnormalized")
       }
     }
+    
+    # add the MSE option only for gaussian response with GCM statistic using LASSO/PLASSO
+    test_hyperparams$MSE <- FALSE
+    if(test_type == "GCM"){
+      if(distribution == "gaussian"){
+        if(X_on_Z_reg$mean_method_type %in% c("LASSO", "PLASSO")){
+          if(Y_on_Z_reg$mean_method_type %in% c("LASSO", "PLASSO")){
+            test_hyperparams$MSE <- TRUE
+          }
+        }
+      }
+    }
+    
 
     # update the lists
     test_type_list[method_idx] <- test_type
@@ -177,8 +191,8 @@ magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type 
            }
          },
          binomial = {
-           X_base <- stats::rbinom(B, 1, exp(predictor.X)/(1+exp(predictor.X)))
-           Y_base <- stats::rbinom(B, 1, exp(predictor.Y)/(1+exp(predictor.Y)))
+           X_base <- stats::rbinom(B, 1, expit(predictor.X))
+           Y_base <- stats::rbinom(B, 1, expit(predictor.Y))
            base_confoun <- simulate_confounding(n,
                                                 X = X_base,
                                                 Y = Y_base)
@@ -188,8 +202,8 @@ magnitude_detect <- function(n, data, c, alpha, beta, gamma, eps = 0.0001, type 
            i <- 1
            while (abs(confoun_level-c) > eps) {
              kappa <- alpha*i
-             X <- stats::rbinom(B, 1, exp(kappa*predictor.X)/(1+exp(kappa*predictor.X)))
-             Y <- stats::rbinom(B, 1, exp(kappa*predictor.Y)/(1+exp(kappa*predictor.Y)))
+             X <- stats::rbinom(B, 1, expit(kappa*predictor.X))
+             Y <- stats::rbinom(B, 1, expit(kappa*predictor.Y))
              confoun_level <- simulate_confounding(n, X, Y)
              i <- i + 1
              if (i > 1E10){
@@ -294,8 +308,8 @@ compute_nu <- function(grid, c, B, no_nu_grid, response_type){
              }
            },
            binomial = {
-             X_base <- stats::rbinom(B, 1, 1/(1+exp(-predictor.X)))
-             Y_base <- stats::rbinom(B, 1, 1/(1+exp(-predictor.Y)))
+             X_base <- stats::rbinom(B, 1, expit(predictor.X))
+             Y_base <- stats::rbinom(B, 1, expit(predictor.Y))
              base_confoun <- simulate_confounding(n,
                                                   X = X_base,
                                                   Y = Y_base)
@@ -305,8 +319,8 @@ compute_nu <- function(grid, c, B, no_nu_grid, response_type){
              c_search <- 0
              while (c_search-c_max < 0) {
                nu_search <- nu_search + 0.1
-               X <- stats::rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_search*predictor.X)))
-               Y <- stats::rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_search*predictor.Y)))
+               X <- stats::rbinom(n = B, size = 1, prob = expit(nu_search*predictor.X))
+               Y <- stats::rbinom(n = B, size = 1, prob = expit(nu_search*predictor.Y))
 
                # compute the actual level c based on X, Y
                c_search <- symcrt::simulate_confounding(n, X, Y)
@@ -334,8 +348,8 @@ compute_nu <- function(grid, c, B, no_nu_grid, response_type){
            binomial = {
              for (k in 1:length(nu_seq)) {
                # generate X and Y
-               X <- stats::rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_seq[k]*predictor.X)))
-               Y <- stats::rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_seq[k]*predictor.Y)))
+               X <- stats::rbinom(n = B, size = 1, prob = expit(nu_seq[k]*predictor.X))
+               Y <- stats::rbinom(n = B, size = 1, prob = expit(nu_seq[k]*predictor.Y))
                # generate corresponding confounding level
                c_seq[k] <- symcrt::simulate_confounding(n, X, Y)
              }
@@ -431,16 +445,16 @@ compute_nu_via_Type_I <- function(grid, maxType_I, alpha, test_type, no_nu, B, r
              }
            },
            binomial = {
-             X_base <- stats::rbinom(B, 1, 1/(1+exp(-predictor.X)))
-             Y_base <- stats::rbinom(B, 1, 1/(1+exp(-predictor.Y)))
+             X_base <- stats::rbinom(B, 1, expit(predictor.X))
+             Y_base <- stats::rbinom(B, 1, expit(predictor.Y))
              base_confoun <- simulate_confounding(n,
                                                   X = X_base,
                                                   Y = Y_base)
              type_I_search <- 0
              while (type_I_search-maxType_I < 0) {
                nu_search <- nu_search + sign(base_confoun)*0.02
-               X <- stats::rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_search*predictor.X)))
-               Y <- stats::rbinom(n = B, size = 1, prob = 1/(1+exp(-nu_search*predictor.Y)))
+               X <- stats::rbinom(n = B, size = 1, prob = expit(nu_search*predictor.X))
+               Y <- stats::rbinom(n = B, size = 1, prob = expit(nu_search*predictor.Y))
 
                # compute the actual level c and type_I error based on X, Y
                c_search <- symcrt::simulate_confounding(n, X, Y)
@@ -551,11 +565,12 @@ compute_theta_via_power <- function(grid, maxPower, alpha, test_type, no_theta, 
              }
            },
            binomial = {
-             E_X_given_Z <- symcrt::glogit(Z %*% gamma)
+             E_X_given_Z <- symcrt::expit(Z %*% gamma)
              X <- stats::rbinom(B, 1, E_X_given_Z)
-             E_Y_given_Z <- glogit(base.theta + Z %*% beta)*glogit(Z %*% gamma) +
-               glogit(Z %*% beta)*(1 - glogit(Z %*% gamma))
-             Y <- stats::rbinom(B, 1, glogit(X*base.theta + Z %*% beta ))
+             E_Y_given_Z <- E_Y_given_Z_binomial_alternative(base.theta, Z %*% gamma, Z %*% beta)
+             # E_Y_given_Z <- expit(base.theta + Z %*% beta)*expit(Z %*% gamma) +
+             #   expit(Z %*% beta)*(1 - expit(Z %*% gamma))
+             Y <- stats::rbinom(B, 1, expit(X*base.theta + Z %*% beta ))
              base_power <- symcrt::simulate_power(n = n,
                                                   X = X,
                                                   Y = Y,
@@ -567,9 +582,10 @@ compute_theta_via_power <- function(grid, maxPower, alpha, test_type, no_theta, 
 
                # update the conditional expectation
                X <- stats::rbinom(n = B, size = 1, prob = E_X_given_Z)
-               E_Y_given_Z <- glogit(theta_search + Z %*% beta)*glogit(Z %*% beta) +
-                 glogit(Z %*% beta)*(1 - glogit(Z %*% beta))
-               Y <- stats::rbinom(n = B, size = 1, prob = glogit(X*theta_search + Z %*% beta))
+               E_Y_given_Z <- E_Y_given_Z_binomial_alternative(theta_search, Z %*% gamma, Z %*% beta)
+               # E_Y_given_Z <- expit(theta_search + Z %*% beta)*expit(Z %*% gamma) +
+               #   expit(Z %*% beta)*(1 - expit(Z %*% gamma))
+               Y <- stats::rbinom(n = B, size = 1, prob = expit(X*theta_search + Z %*% beta))
 
                # compute the actual level c and power based on X, Y
                c_search <- symcrt::simulate_power(n,
@@ -681,11 +697,12 @@ compute_theta_via_power_fixed_c <- function(grid, maxPower, alpha, test_type, no
              }
            },
            binomial = {
-             E_X_given_Z <- symcrt::glogit(Z %*% gamma)
+             E_X_given_Z <- symcrt::expit(Z %*% gamma)
              X <- stats::rbinom(B, 1, E_X_given_Z)
-             E_Y_given_Z <- glogit(base.theta + Z %*% beta)*glogit(Z %*% gamma) +
-               glogit(Z %*% beta)*(1 - glogit(Z %*% gamma))
-             Y <- stats::rbinom(B, 1, glogit(X*base.theta + Z %*% beta ))
+             E_Y_given_Z <- E_Y_given_Z_binomial_alternative(base.theta, Z %*% gamma, Z %*% beta)
+             # E_Y_given_Z <- expit(base.theta + Z %*% beta)*expit(Z %*% gamma) +
+             #   expit(Z %*% beta)*(1 - expit(Z %*% gamma))
+             Y <- stats::rbinom(B, 1, expit(X*base.theta + Z %*% beta ))
              base_power <- symcrt::simulate_power(n = n,
                                                   X = X,
                                                   Y = Y,
@@ -697,9 +714,10 @@ compute_theta_via_power_fixed_c <- function(grid, maxPower, alpha, test_type, no
 
                # update the conditional expectation
                X <- stats::rbinom(n = B, size = 1, prob = E_X_given_Z)
-               E_Y_given_Z <- glogit(theta_search + Z %*% beta)*glogit(Z %*% beta) +
-                 glogit(Z %*% beta)*(1 - glogit(Z %*% beta))
-               Y <- stats::rbinom(n = B, size = 1, prob = glogit(X*theta_search + Z %*% beta))
+               E_Y_given_Z <- E_Y_given_Z_binomial_alternative(theta_search, Z %*% gamma, Z %*% beta)
+               # E_Y_given_Z <- expit(theta_search + Z %*% beta)*expit(Z %*% gamma) +
+               #   expit(Z %*% beta)*(1 - expit(Z %*% gamma))
+               Y <- stats::rbinom(n = B, size = 1, prob = expit(X*theta_search + Z %*% beta))
 
                # compute the actual level c and power based on X, Y
                c_search <- symcrt::simulate_power(n,
@@ -756,6 +774,7 @@ pval_shift <- function(alpha, c, type = "two_side"){
 #' Generic function to generate data for the numerical simulations
 #'
 #' @param n Sample size
+#' @param N Unlabel sample size
 #' @param d Dimension of Z
 #' @param rho Autocorrelation parameter for Z
 #' @param B Number of samples to draw
@@ -776,6 +795,7 @@ generate_data <- function(n, N, d, rho, B, coef_neg, coef_pos, nu, theta, distri
   Z <- katlabutils::fast_generate_mvn(mean = numeric(d),
                                       covariance = sig,
                                       num_samples = B * n)
+  
 
   # generate Z_unlabel with B*N rows
   Z_unlabel <- katlabutils::fast_generate_mvn(mean = numeric(d),
@@ -791,6 +811,13 @@ generate_data <- function(n, N, d, rho, B, coef_neg, coef_pos, nu, theta, distri
   # sample X|Z, Y|Z from corresponding model (linear or logistic)
   gamma <- nu*base_gamma
   beta <- nu*base_beta
+  
+  # compute the conditional mean of Z_1|Z_2
+  cond.ind <- seq(1:length(which(base_beta != 0)))
+  Z.given <- Z[, cond.ind]
+  Z2_given_Z1 <- symcrt::compute_cond_mean(Sigma = sig, 
+                                           cond.ind = cond.ind, 
+                                           X.given = Z.given)
 
   # generate ground truth mean vectors for oracle methods
   predictor.X <- Z %*% gamma
@@ -799,10 +826,11 @@ generate_data <- function(n, N, d, rho, B, coef_neg, coef_pos, nu, theta, distri
     E_X_given_Z_oracle <- predictor.X
     E_Y_given_Z_oracle <- predictor.Y + theta * predictor.X
   } else if (distribution == "binomial") {
-    E_X_given_Z_oracle <- 1 / (1 + exp(-predictor.X))
+    E_X_given_Z_oracle <- expit(predictor.X)
     # use the formula in the document
-    E_Y_given_Z_oracle <- (1 / (1 + exp(-theta - predictor.Y))) * (1 / (1 + exp(-predictor.X))) +
-      (1 / (1 + exp(-predictor.Y))) * (1 / (1 + exp(predictor.X)))
+    E_Y_given_Z_oracle <- E_Y_given_Z_binomial_alternative(theta, predictor.X, predictor.Y)
+    # E_Y_given_Z_oracle <- (1 / (1 + exp(-theta - predictor.Y))) * (1 / (1 + exp(-predictor.X))) +
+    #   (1 / (1 + exp(-predictor.Y))) * (1 / (1 + exp(predictor.X)))
   } else {
     stop("distribution must be one of binomial, gaussian")
   }
@@ -836,7 +864,13 @@ generate_data <- function(n, N, d, rho, B, coef_neg, coef_pos, nu, theta, distri
       E_X_given_Z_oracle = E_X_given_Z_oracle[start:end],
       E_Y_given_Z_oracle = E_Y_given_Z_oracle[start:end],
       Z_unlabel = Z_unlabel[start:end, ],
-      X_unlabel = X_unlabel[start:end]
+      X_unlabel = X_unlabel[start:end],
+      Z2_given_Z1 = t(Z2_given_Z1)[start:end, ],
+      beta = beta,
+      gamma = gamma,
+      theta = theta,
+      setting = setting,
+      s = length(which(base_beta != 0))
     )
     return(df)
   }, simplify = FALSE)
@@ -858,4 +892,19 @@ compute_cond_mean <- function(Sigma, cond.ind, X.given){
   cond.else <- setdiff(1:nrow(Sigma), cond.ind)
   sig.cov <- Sigma[cond.else,cond.ind] %*% solve(Sigma[cond.ind, cond.ind])
   sig.cov %*% t(X.given)
+}
+
+
+#' A function that computes the conditional expectation of Y|Z under alternative
+#'
+#' @param theta The signal of X in Y model
+#' @param pred.X Predictor of X given Z
+#' @param pred.Y Predictor of Y given Z
+#'
+#' @return A positive value.
+#' @export
+
+E_Y_given_Z_binomial_alternative <- function(theta, pred.X, pred.Y){
+  (1 / (1 + exp(-theta - pred.Y))) * (1 / (1 + exp(-pred.X))) +
+    (1 / (1 + exp(-pred.Y))) * (1 / (1 + exp(pred.X)))
 }

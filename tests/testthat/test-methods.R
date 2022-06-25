@@ -2,6 +2,7 @@ test_that("dCRT works", {
 
   # test whether a specific example gives exactly the right answer
   # (generated using dput)
+  set.seed(1)
   n <- 100
   d <- 5
   gamma <- 2 * rbinom(d, 1, 0.5) - 1
@@ -31,7 +32,7 @@ test_that("dCRT works", {
     mean_method_hyperparams = list(
       family = "gaussian"
     ),
-    var_method_type = "squared_residuals"
+    var_method_type = "homoskedastic"
   )
   
   # test whether we get similar p-value from MX2 and dCRT
@@ -39,7 +40,8 @@ test_that("dCRT works", {
   MX2_result <- MX2_F_test(
     data = data,
     X_on_Z_reg = X_on_Z_reg,
-    Y_on_Z_reg = Y_on_Z_reg
+    Y_on_Z_reg = Y_on_Z_reg,
+    test_hyperparams = list(var_method_type = "homoskedastic")
   )
   p_value_MX2 <- MX2_result |>
     dplyr::filter(parameter == "p_value") |>
@@ -342,7 +344,7 @@ test_that("GCM MSE computation works", {
                E_Y_given_Z_oracle = cond_mean_Y_Z,
                Z2_given_Z1 = t(Z2_given_Z1),
                s = s,
-               type = "null",
+               setting = "null",
                beta = beta,
                gamma = gamma
                )
@@ -387,7 +389,7 @@ test_that("GCM MSE computation works", {
   GCM_result <- GCM(data = data,
                     X_on_Z_reg = X_on_Z_reg,
                     Y_on_Z_reg = Y_on_Z_reg,
-                    test_hyperparams = list(MSE = "TRUE")
+                    test_hyperparams = list(MSE = TRUE)
                     )
   MSE_GCM_shared <- GCM_result |> 
     dplyr::select(value) |> 

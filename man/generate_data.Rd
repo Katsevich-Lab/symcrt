@@ -21,6 +21,8 @@ generate_data(
 \arguments{
 \item{n}{Sample size}
 
+\item{N}{Unlabel sample size}
+
 \item{d}{Dimension of Z}
 
 \item{rho}{Autocorrelation parameter for Z}

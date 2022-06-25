@@ -131,7 +131,7 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   p_value <- 2 * stats::pnorm(abs(test_statistic), lower.tail = FALSE)
 
   # compute MSE only for Gaussian
-  if(is.null(test_hyperparams$MSE) == FALSE){
+  if(test_hyperparams$MSE){
     if(is.null(data$beta)){
       stop("Must specify the orcale beta coefficient when computing MSE")
     }
@@ -147,30 +147,29 @@ GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
     # compute MSE on shared/total variables
     MSE_shared_X_on_Z <- MSE_shared(data = data, coef_hat = gamma_hat, type = "null", cond_distr = "X_on_Z")
     MSE_total_X_on_Z <- MSE_total(oracle_pred = oracle_X_given_Z, covariate = data$Z, coef_hat = gamma_hat)
-    MSE_shared_Y_on_Z <- MSE_shared(data = data, coef_hat = beta_hat, type = data$type, cond_distr = "Y_on_Z")
+    MSE_shared_Y_on_Z <- MSE_shared(data = data, coef_hat = beta_hat, type = data$setting, cond_distr = "Y_on_Z")
     MSE_total_Y_on_Z <- MSE_total(oracle_pred = oracle_Y_given_Z, covariate = data$Z, coef_hat = beta_hat)
   }
 
   # output the results
-  if(is.null(test_hyperparams$MSE)){
+  if(!test_hyperparams$MSE){
     return(
-      data.frame(
+      result <- data.frame(
         parameter = c("test_statistic", "p_value"),
         target = "conditional_independence",
         value = c(test_statistic, p_value))
     )
   }else{
-    return(
-      data.frame(
-        parameter = c("test_statistic", "p_value",
-                      "MSE_shared_X_Z", "MSE_total_X_Z",
-                      "MSE_shared_Y_Z", "MSE_total_Y_Z"),
-        target = "conditional_independence",
-        value = c(test_statistic, p_value,
-                  MSE_shared_X_on_Z, MSE_total_X_on_Z,
-                  MSE_shared_Y_on_Z, MSE_total_Y_on_Z))
-    )
+    result <- data.frame(
+      parameter = c("test_statistic", "p_value",
+                    "MSE_shared_X_Z", "MSE_total_X_Z",
+                    "MSE_shared_Y_Z", "MSE_total_Y_Z"),
+      target = "conditional_independence",
+      value = c(test_statistic, p_value,
+                MSE_shared_X_on_Z, MSE_total_X_on_Z,
+                MSE_shared_Y_on_Z, MSE_total_Y_on_Z))
   }
+  result
 }
 
 
@@ -452,7 +451,7 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   Y_on_Z_reg_hyperparams <- Y_on_Z_reg$mean_method_hyperparams
   switch(Y_on_Z_reg_hyperparams$family,
          binomial = {
-           E_Y_given_Z_test <- 1/(1 + exp(-cbind(1, Z[index_test, ])%*%coef_Y_given_Z))
+           E_Y_given_Z_test <- expit(cbind(1, Z[index_test, ])%*%coef_Y_given_Z)
          },
          gaussian = {
            E_Y_given_Z_test <- cbind(1, Z[index_test, ])%*%coef_Y_given_Z
@@ -466,7 +465,7 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   switch(test_hyperparams$resample_family,
          binomial = {
            # compute the labeled E(X|Z)
-           E_X_given_Z_test <- as.vector(glogit(cbind(1, Z[index_test, ])%*%coef_X_given_Z))
+           E_X_given_Z_test <- as.vector(expit(cbind(1, Z[index_test, ])%*%coef_X_given_Z))
 
            # calibration
            if(any(g_Z_unlabel == "zero")){
@@ -474,7 +473,7 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
            }else{
              fit_X_on_g_h <- stats::glm(X_unlabel ~ g_Z_unlabel, offset = logit(E_X_given_Z), family = "binomial")
              # resample matrix from the specified distribution
-             resample_mean <- glogit(logit(E_X_given_Z_test) + as.vector(cbind(1, g_Z_test)%*%(fit_X_on_g_h$coefficients)))
+             resample_mean <- expit(logit(E_X_given_Z_test) + as.vector(cbind(1, g_Z_test)%*%(fit_X_on_g_h$coefficients)))
            }
            resample_var <- resample_mean*(1-resample_mean)
            resample_matrix <- resample_dCRT(conditional_mean = resample_mean,

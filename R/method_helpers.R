@@ -211,7 +211,7 @@ set_default_test_hyperparams <- function(method_type, hyperparams){
 
   if(method_type == "MaxwayCRT"){
     if(is.null(hyperparams$unlabel_prop)){
-      hyperparams$unlabel_prop <- 0
+      hyperparams$unlabel_prop <- 0.5
     }
     if(is.null(hyperparams$holdout_prop)){
       hyperparams$holdout_prop <- 0

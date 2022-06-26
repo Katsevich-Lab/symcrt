@@ -395,7 +395,7 @@ test_that("GCM MSE computation works", {
     dplyr::select(value) |> 
     as.vector()
   
-  expect_lt(abs(MSE_GCM_shared[3,] - MSE_shared_X_on_Z),
+  expect_lt(abs(MSE_GCM_shared$value[3] - MSE_shared_X_on_Z),
             0.2)
 })
 

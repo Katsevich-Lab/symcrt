@@ -75,7 +75,6 @@ MX2_F_test <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
 #'
 #' @export
 GCM <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
-  set.seed(1)
   # set the default hyperparameters
   test_hyperparams <- set_default_test_hyperparams("GCM", test_hyperparams)
   # extract the unlabel data
@@ -240,7 +239,6 @@ GCM_debug <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
 #' @return A data frame with columns "parameter," "target," "value" with p-value.
 #' @export
 dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
-  set.seed(1)
   # set default test hyperparameters
   test_hyperparams <- set_default_test_hyperparams("dCRT", test_hyperparams)
 
@@ -343,7 +341,6 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
 #' @return A data frame with columns "parameter," "target," "value" with p-value.
 #' @export
 MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
-  set.seed(1)
   test_hyperparams <- set_default_test_hyperparams("MaxwayCRT", test_hyperparams)
   # extract X, Y, Z from first input argument
   X <- data$X

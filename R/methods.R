@@ -348,23 +348,26 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   Z <- data$Z
   n <- nrow(Z)
   d <- ncol(Z)
-  if(test_hyperparams$unlabel_prop == 0){
+  if(test_hyperparams$way_to_learn == "semi_supervised"){
     X_unlabel <- data$X_unlabel
     Z_unlabel <- data$Z_unlabel
     no_unlabel <- nrow(Z_unlabel)
     index_unlabel <- sample(1:n, no_unlabel)
-
+    
     if(is.null(X_unlabel)){
       stop("Unlabel data should be provided!")
     }
-
+    
     # extract the proportion of the number of holdout data and sample 1:n
     no_holdout <- round(n*test_hyperparams$holdout_prop)
     index_holdout <- sample(1:n, no_holdout)
-
+    
     # extract the index that used for testing
     index_test <- setdiff(1:n, index_holdout)
   }else{
+    if(test_hyperparams$unlabel_prop == 0){
+      stop("Must specify the proportion of unlabel data in supervised setting!")
+    }
     # extract the proportion of the number of unlabelled data and sample 1:n
     no_unlabel <- round(n*test_hyperparams$unlabel_prop)
     index_unlabel <- sample(1:n, no_unlabel)

@@ -437,6 +437,7 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
     act_set_Y_given_Z <- order(abs(coef_Y_given_Z[-1]), decreasing=TRUE)[1:no_act_set_Y_given_Z]
   }
 
+
   # concatenate predictor and active Z together
   predictor_Y_Z_unlabel <- cbind(1, Z_unlabel)%*%coef_Y_given_Z
   predictor_Y_Z_test <- cbind(1, Z[index_test, ])%*%coef_Y_given_Z
@@ -445,9 +446,12 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
     # g_Z_unlabel <- stats::rnorm(no_unlabel)
     # g_Z_test <- stats::rnorm(length(index_test))
   }else{
-    g_Z_unlabel <- orthogonalize(predictor_Y_Z_unlabel, Z_unlabel[, act_set_Y_given_Z])
-    g_Z_test <- orthogonalize(predictor_Y_Z_test, Z[index_test, act_set_Y_given_Z])
+    g_Z_unlabel <- Z_unlabel[, act_set_Y_given_Z]
+    g_Z_test <- Z[index_test, act_set_Y_given_Z]
+    # g_Z_unlabel <- orthogonalize(predictor_Y_Z_unlabel, Z_unlabel[, act_set_Y_given_Z])
+    # g_Z_test <- orthogonalize(predictor_Y_Z_test, Z[index_test, act_set_Y_given_Z])
   }
+  # print(g_Z_unlabel[,ncol(g_Z_unlabel)])
 
   # fit the conditional expectation of Y|Z on label data
   Y_on_Z_reg_hyperparams <- Y_on_Z_reg$mean_method_hyperparams
@@ -462,6 +466,7 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
            stop("The regression type is invalid!")
          }
   )
+  
 
   # learning the resampling distribution with unlabelled data
   switch(test_hyperparams$resample_family,
@@ -506,6 +511,7 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
            r_unlabel <- X_unlabel - cbind(1, Z_unlabel)%*%coef_X_given_Z
            r_label <- X[index_test] - cbind(1, Z[index_test, ])%*%coef_X_given_Z
            E_X_given_Z_test <- cbind(1, Z[index_test, ])%*%coef_X_given_Z
+        
 
            if(any(g_Z_unlabel == "zero")){
              X_residuals <- r_label - rep(mean(r_label), length(r_label))
@@ -523,6 +529,7 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
              coef_residual_on_g <- fit_residual_g_Z$coef_vec
              X_residuals <- r_label - cbind(1, g_Z_test)%*%coef_residual_on_g
            }
+           
 
            # compute p_value
            X_residuals <- X_residuals/(stats::sd(X_residuals))

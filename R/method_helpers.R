@@ -244,7 +244,12 @@ set_default_test_hyperparams <- function(method_type, hyperparams){
 
 orthogonalize <- function(gZ, Z_sub){
   model.fit <- stats::lm(gZ ~ Z_sub)
-  Z_convert <- cbind(Z_sub, model.fit$residual)
+  residual <- model.fit$residual
+  if(any(residual == 0)){
+    residual <- stats::rnorm(nrow(Z_sub), 0, 0.02)
+  }
+  Z_convert <- cbind(Z_sub, residual)
+  
   return(Z_convert)
 }
 

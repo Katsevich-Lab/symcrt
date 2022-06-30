@@ -446,10 +446,10 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
     # g_Z_unlabel <- stats::rnorm(no_unlabel)
     # g_Z_test <- stats::rnorm(length(index_test))
   }else{
-    g_Z_unlabel <- Z_unlabel[, act_set_Y_given_Z]
-    g_Z_test <- Z[index_test, act_set_Y_given_Z]
-    # g_Z_unlabel <- orthogonalize(predictor_Y_Z_unlabel, Z_unlabel[, act_set_Y_given_Z])
-    # g_Z_test <- orthogonalize(predictor_Y_Z_test, Z[index_test, act_set_Y_given_Z])
+    g_Z_unlabel_act <- Z_unlabel[, act_set_Y_given_Z]
+    g_Z_test_act <- Z[index_test, act_set_Y_given_Z]
+    g_Z_unlabel <- orthogonalize(predictor_Y_Z_unlabel, Z_unlabel[, act_set_Y_given_Z])
+    g_Z_test <- orthogonalize(predictor_Y_Z_test, Z[index_test, act_set_Y_given_Z])
   }
   # print(g_Z_unlabel[,ncol(g_Z_unlabel)])
 
@@ -479,8 +479,14 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
              resample_mean <- E_X_given_Z_test
            }else{
              fit_X_on_g_h <- stats::glm(X_unlabel ~ g_Z_unlabel, offset = logit(E_X_given_Z), family = "binomial")
-             # resample matrix from the specified distribution
-             resample_mean <- expit(logit(E_X_given_Z_test) + as.vector(cbind(1, g_Z_test)%*%(fit_X_on_g_h$coefficients)))
+             if(any(is.na(fit_X_on_g_h$coefficients))){
+               fit_X_on_g_h <- stats::glm(X_unlabel ~ g_Z_unlabel_act, offset = logit(E_X_given_Z), family = "binomial")
+               # resample matrix from the specified distribution
+               resample_mean <- expit(logit(E_X_given_Z_test) + as.vector(cbind(1, g_Z_test_act)%*%(fit_X_on_g_h$coefficients)))
+             }else{
+               # resample matrix from the specified distribution
+               resample_mean <- expit(logit(E_X_given_Z_test) + as.vector(cbind(1, g_Z_test)%*%(fit_X_on_g_h$coefficients)))
+             }
            }
            resample_var <- resample_mean*(1-resample_mean)
            resample_matrix <- resample_dCRT(conditional_mean = resample_mean,
@@ -527,13 +533,26 @@ MaxwayCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
                                                           fit_residual_g_Z$conditional_mean,
                                                           test_hyperparams$var_method_type)
              coef_residual_on_g <- fit_residual_g_Z$coef_vec
-             X_residuals <- r_label - cbind(1, g_Z_test)%*%coef_residual_on_g
+             if(any(is.na(coef_residual_on_g))){
+               fit_residual_g_Z <- fit_conditional_mean(r_unlabel, g_Z_unlabel_act, residual_on_gZ)
+               Var_residual_g_Z <- fit_conditional_variance(r_unlabel,
+                                                            g_Z_unlabel_act,
+                                                            fit_residual_g_Z$conditional_mean,
+                                                            test_hyperparams$var_method_type)
+               coef_residual_on_g <- fit_residual_g_Z$coef_vec
+               # compute residuals
+               X_residuals <- r_label - cbind(1, g_Z_test_act)%*%coef_residual_on_g
+             }else{
+               # compute residuals
+               X_residuals <- r_label - cbind(1, g_Z_test)%*%coef_residual_on_g
+             }
            }
            
 
            # compute p_value
            X_residuals <- X_residuals/(stats::sd(X_residuals))
            Y_residuals <- c(Y[index_test] - E_Y_given_Z_test)
+           print(any(is.na(X_residuals)))
            n_test <- length(X_residuals)
            imp_obe <- mean(X_residuals * Y_residuals)
            emp_var <- mean(Y_residuals^2)

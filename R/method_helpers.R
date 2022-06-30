@@ -14,12 +14,12 @@ fit_conditional_mean <- function(response, features, method) {
   hyperparams <- set_default_method_hyperparams(method_type, hyperparams)
   switch(method_type,
     MLE = {
-      GLM_fit <- stats::glm(response ~ features, family = hyperparams$family)
+      suppressWarnings(GLM_fit <- stats::glm(response ~ features, family = hyperparams$family))
       list(conditional_mean = GLM_fit$fitted.values,
            coef_vec = as.vector(GLM_fit$coefficients))
     },
     LASSO = {
-      lasso_fit <- fit_lasso(response, features, hyperparams)
+      suppressWarnings(lasso_fit <- fit_lasso(response, features, hyperparams))
       # generate predictions
       list(conditional_mean = as.vector(stats::predict(lasso_fit,
                                              newx = features,
@@ -30,7 +30,7 @@ fit_conditional_mean <- function(response, features, method) {
 
     },
     PLASSO = {
-      lasso_fit <- fit_lasso(response, features, hyperparams)
+      suppressWarnings(lasso_fit <- fit_lasso(response, features, hyperparams))
       coefs <- stats::coef(lasso_fit, s = hyperparams$s)
       act_set <- which(coefs[-1, 1] != 0) |> unname()
       if (length(act_set) == 0) {

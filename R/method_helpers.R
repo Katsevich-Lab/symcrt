@@ -217,7 +217,7 @@ set_default_test_hyperparams <- function(method_type, hyperparams){
       hyperparams$holdout_prop <- 0
     }
     if(is.null(hyperparams$g_Z_support)){
-      hyperparams$g_Z_support <- "default"
+      hyperparams$g_Z_support <- "support of beta_hat"
     }
     if(hyperparams$holdout_prop + hyperparams$unlabel_prop >= 1){
       stop("The number of unlablled and holdout data exceeds the total number of data!")

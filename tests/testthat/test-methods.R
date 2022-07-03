@@ -215,7 +215,7 @@ test_that("MaxwayCRT works for Gaussian", {
   Molei_MaxwayCRT <- MaxwayCRT$Maxway_d0CRT_pvl
   expect_lt(
     abs(Molei_MaxwayCRT - p_value_MaxwayCRT),
-    0.05
+    0.1
   )
 })
 

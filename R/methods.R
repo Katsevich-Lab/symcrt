@@ -322,9 +322,9 @@ dCRT <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
 
   # output the results
   data.frame(
-    parameter = c("p_value"),
+    parameter = c("test_statistic", "p_value"),
     target = "conditional_independence",
-    value = c(p_value)
+    value = c(test_statistic, p_value)
   )
 }
 

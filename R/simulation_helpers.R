@@ -60,7 +60,7 @@ generate_method_list_from_strings <- function(method_strings, distribution, way_
         stop("normalization variable should either be normalized or unnormalized")
       }
     }
-    
+
     # add the MSE option only for gaussian response with GCM statistic using LASSO/PLASSO
     test_hyperparams$MSE <- FALSE
     if(test_type == "GCM"){
@@ -72,7 +72,7 @@ generate_method_list_from_strings <- function(method_strings, distribution, way_
         }
       }
     }
-    
+
 
     # update the lists
     test_type_list[method_idx] <- test_type
@@ -795,7 +795,7 @@ generate_data <- function(n, N, d, rho, B, coef_neg, coef_pos, nu, theta, distri
   Z <- katlabutils::fast_generate_mvn(mean = numeric(d),
                                       covariance = sig,
                                       num_samples = B * n)
-  
+
 
   # generate Z_unlabel with B*N rows
   Z_unlabel <- katlabutils::fast_generate_mvn(mean = numeric(d),
@@ -811,12 +811,12 @@ generate_data <- function(n, N, d, rho, B, coef_neg, coef_pos, nu, theta, distri
   # sample X|Z, Y|Z from corresponding model (linear or logistic)
   gamma <- nu*base_gamma
   beta <- nu*base_beta
-  
+
   # compute the conditional mean of Z_1|Z_2
   cond.ind <- seq(1:length(which(base_beta != 0)))
   Z.given <- Z[, cond.ind]
-  Z2_given_Z1 <- symcrt::compute_cond_mean(Sigma = sig, 
-                                           cond.ind = cond.ind, 
+  Z2_given_Z1 <- symcrt::compute_cond_mean(Sigma = sig,
+                                           cond.ind = cond.ind,
                                            X.given = Z.given)
 
   # generate ground truth mean vectors for oracle methods
@@ -907,4 +907,120 @@ compute_cond_mean <- function(Sigma, cond.ind, X.given){
 E_Y_given_Z_binomial_alternative <- function(theta, pred.X, pred.Y){
   (1 / (1 + exp(-theta - pred.Y))) * (1 / (1 + exp(-pred.X))) +
     (1 / (1 + exp(-pred.Y))) * (1 / (1 + exp(pred.X)))
+}
+
+#' Create simulatr specifier object
+#'
+#' @param alpha nominal level
+#' @param maxType_I_null maximum Type-I error for naive GCM in null simulation
+#' @param Type_I_alt Type-I error for naive GCM in alternative simulation
+#' @param maxPower maximum power for oracle GCM in alternative simulation
+#' @param test_type sidedness of the tests
+#' @param no_nu number of values for nu parameter (effect of Z on Y)
+#' @param no_theta number of values for theta parameter (effect of X on Y)
+#' @param seed seed to control random number generation
+#' @param B_nu number of replicates for nu computation
+#' @param B_theta number of replicates for theta computation
+#' @param B_reps number of repetitions for each parameter setting
+#' @param baseline_values baseline values of each parameter
+#' @param varying_values values along which to vary each parameter
+#' @param distribution "binomial" or "gaussian"
+#' @param way_to_learn "supervised" or "semi_supervised"
+#' @param setting "null", "calibration", or "alternative"
+#' @param method_strings list of strings specifying the methods to be applied
+#'
+#' @return The resulting simulatr specifier object.
+#' @export
+create_simspec_object <- function(alpha,
+                                  maxType_I_null,
+                                  Type_I_alt,
+                                  maxPower,
+                                  test_type,
+                                  no_nu,
+                                  no_theta,
+                                  seed,
+                                  B_nu,
+                                  B_theta,
+                                  B_reps,
+                                  baseline_values,
+                                  varying_values,
+                                  distribution,
+                                  way_to_learn,
+                                  setting,
+                                  method_strings) {
+  ### p_grid
+  # augment p_grid with nu and/or theta
+  if (setting == "null") {
+    set.seed(1)
+    p_grid <- global_p_grid |>
+      compute_nu_via_Type_I(
+        maxType_I = maxType_I_null,
+        alpha = alpha,
+        test_type = test_type,
+        no_nu = no_nu,
+        B = B_nu,
+        response_type = distribution
+      ) |>
+      dplyr::mutate(theta = 0)
+  } else if (setting %in% c("calibration", "alternative")) {
+    set.seed(1)
+    p_grid <- global_p_grid |>
+      compute_nu_via_Type_I(
+        maxType_I = Type_I_alt,
+        alpha = alpha,
+        test_type = test_type,
+        no_nu = 1,
+        B = B_nu,
+        response_type = distribution
+      ) |>
+      compute_theta_via_power(
+        maxPower = maxPower,
+        alpha = alpha,
+        test_type = test_type,
+        no_theta = no_theta,
+        B = B_theta,
+        response_type = distribution
+      )
+  } else {
+    stop("setting must be one of null, calibration, alternative")
+  }
+
+  # add grid_id, distribution type, and number of unsupervised samples
+  p_grid <- p_grid |>
+    dplyr::mutate(
+      grid_id = dplyr::row_number(),
+      N = n
+    ) |>
+    tibble::as_tibble() |> # silly trick to remove row names from data frame
+    as.data.frame()
+
+  ### fixed_params
+  fixed_params <- list(
+    B = B_reps,
+    seed = seed,
+    distribution = distribution,
+    setting = setting,
+    n_processors = 1 # placeholder until we add adaptive n_processors
+  )
+
+  ### generate data function
+  generate_data_spec_f <- simulatr::simulatr_function(
+    f = generate_data,
+    arg_names = formalArgs(generate_data),
+    loop = FALSE
+  )
+
+  method_list <- generate_method_list_from_strings(
+    method_strings[[setting]],
+    distribution,
+    way_to_learn
+  )
+
+  # create simulatr specifier object
+  simulatr::simulatr_specifier(
+    parameter_grid = p_grid,
+    fixed_parameters = fixed_params,
+    generate_data_function = generate_data_spec_f,
+    run_method_functions = method_list
+  )
 }

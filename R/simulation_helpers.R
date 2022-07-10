@@ -948,6 +948,13 @@ create_simspec_object <- function(alpha,
                                   way_to_learn,
                                   setting,
                                   method_strings) {
+
+  ### create global p_grid, to be used by all simulations ###
+  global_p_grid <- simulatr::create_param_grid_fractional_factorial(
+    varying_values,
+    baseline_values
+  )
+
   ### p_grid
   # augment p_grid with nu and/or theta
   if (setting == "null") {

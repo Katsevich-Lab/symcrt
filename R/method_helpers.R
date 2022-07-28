@@ -38,10 +38,10 @@ fit_conditional_mean <- function(response, features, method) {
       } else {
         suppressWarnings(glm_fit <- stats::glm(response ~ features[, act_set], family = hyperparams$family))
       }
-      coefs[act_set] <- as.vector(glm_fit$coefficients)[-1]
-      coefs[1] <-  as.vector(glm_fit$coefficients)[1]
+      coefs[act_set + 1, 1] <- as.vector(glm_fit$coefficients)[-1]
+      coefs[1, 1] <-  as.vector(glm_fit$coefficients)[1]
       list(conditional_mean = glm_fit$fitted.values,
-           coef_vec = coefs)
+           coef_vec = coefs[,1])
     },
     naive = {
       # provide unconditional expectation

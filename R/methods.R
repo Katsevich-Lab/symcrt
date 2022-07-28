@@ -203,10 +203,12 @@ GCM_debug <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   n <- nrow(Z)
 
   # fit conditional mean of X given Z
-  E_X_given_Z <- fit_conditional_mean(X, Z, X_on_Z_reg)$conditional_mean # hat{E(X|Z)}
-
+  X_given_Z <- symcrt::fit_conditional_mean(X, Z, X_on_Z_reg)
+  E_X_given_Z <- X_given_Z$conditional_mean # hat{E(X|Z)}
+  
   # fit conditional mean of Y given Z
-  E_Y_given_Z <- fit_conditional_mean(Y, Z, Y_on_Z_reg)$conditional_mean # hat{E(Y|Z)}
+  Y_given_Z <- symcrt::fit_conditional_mean(Y, Z, Y_on_Z_reg)
+  E_Y_given_Z <- Y_given_Z$conditional_mean # hat{E(Y|Z)}
 
   # compute the oracle residuals
   X_oracle_residuals <- X - cond_mean_X_Z # X - E(X|Z)
@@ -221,9 +223,12 @@ GCM_debug <- function(data, X_on_Z_reg, Y_on_Z_reg, test_hyperparams) {
   Y_Z_bias <- sqrt(n)*mean(X_oracle_residuals*cond_mean_diff_Y_Z)/sqrt(mean(R^2) - (mean(R))^2)
 
   # output the results
-  data.frame(parameter = c("cross_bias", "X_Z_bias", "Y_Z_bias"),
-             target = "bias",
-             value = c(cross_bias, X_Z_bias, Y_Z_bias))
+  out <- data.frame(parameter = c("cross_bias", "X_Z_bias", "Y_Z_bias"),
+                    target = "bias",
+                    value = c(cross_bias, X_Z_bias, Y_Z_bias))
+  out$coef_X_on_Z <- list(as.vector(X_given_Z$coef_vec)[-1])
+  out$coef_Y_on_Z <- list(as.vector(Y_given_Z$coef_vec)[-1])
+  return(out)
 }
 
 

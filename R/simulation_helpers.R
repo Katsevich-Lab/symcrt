@@ -4,7 +4,7 @@
 #
 ######################################################################
 
-#' Helper function to translate the data frame of method specifications into a
+#' Helper function to translate a list of method specifications strings into a
 #' list of simulatr functions.
 #'
 #' @param method_strings A vector of strings of the kind we define in create_simspec_objects.R
@@ -14,6 +14,20 @@
 #' @return A list of simulatr functions whose length is same as that of \code{method_strings}.
 #' @export
 generate_method_list_from_strings <- function(method_strings, distribution, way_to_learn) {
+  generate_method_df_from_strings(method_strings, distribution, way_to_learn) |>
+    generate_method_list_from_df()
+}
+
+#' Helper function to translate a list of method specifications strings into a
+#' data frame for use with \code{generate_method_list_from_df}
+#'
+#' @param method_strings A vector of strings of the kind we define in create_simspec_objects.R
+#' @param distribution Either "binomial" or "gaussian"
+#' @param way_to_learn Either "supervised" or "semi_supervised"
+#'
+#' @return A data frame as expected by \code{generate_method_list_from_df}
+#' @export
+generate_method_df_from_strings <- function(method_strings, distribution, way_to_learn){
   set.seed(1)
   num_methods <- length(method_strings)
 
@@ -85,8 +99,7 @@ generate_method_list_from_strings <- function(method_strings, distribution, way_
   tibble::tibble(test_type = test_type_list,
                  X_on_Z_reg = X_on_Z_reg_list,
                  Y_on_Z_reg = Y_on_Z_reg_list,
-                 test_hyperparams = test_hyperparams_list) |>
-  generate_method_list_from_df()
+                 test_hyperparams = test_hyperparams_list)
 }
 
 #' Helper function to translate the data frame of method specifications into a

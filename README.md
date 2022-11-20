@@ -1,29 +1,9 @@
-
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
 # symcrt
 
-<!-- badges: start -->
-<!-- badges: end -->
+This package supports the [numerical simulations](https://github.com/Katsevich-Lab/symcrt-manuscript-v1) in the following paper:
 
-The goal of symcrt is to implementat various methods for conditional
-independence testing, including the MX(2) F-test, dCRT, and GCM.
+Z. Niu, A. Chakraborty, O. Dukes, E. Katsevich.
+"Reconciling model-X and doubly robust approaches to conditional independence testing." 
+([arXiv]())
 
-## Installation
-
-You can install the development version of symcrt from
-[GitHub](https://github.com/) with:
-
-``` r
-# install.packages("devtools")
-# devtools::install_github("Katsevich-Lab/symcrt")
-```
-
-## Example
-
-This is a basic example which shows you how to solve a common problem:
-
-``` r
-## library(symcrt)
-## basic example code
-```
+It implements the conditional independence testing methodologies compared: the dCRT, the GCM test, and Maxway CRT. It also contains several helper functions used to carry out the numerical simulations.
